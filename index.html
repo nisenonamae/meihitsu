@@ -78,6 +78,21 @@ input[type=text]{font:inherit;font-size:15px;color:var(--fg);background:#17171a;
 #bs{position:relative;overflow:hidden;line-height:1.2;-webkit-user-select:none;user-select:none;-webkit-touch-callout:none}#bs small{display:block;font-size:10px;color:var(--sub)}
 #bsr{line-height:1.2;-webkit-user-select:none;user-select:none;-webkit-touch-callout:none;touch-action:none}#bsr small{display:block;font-size:10px;color:var(--sub)}#bsr.on{border-color:var(--ng);color:var(--ng)}
 #bs.hold::after{content:"";position:absolute;inset:0;background:rgba(224,138,122,.35);transform-origin:left;animation:bshold .7s linear forwards}@keyframes bshold{from{transform:scaleX(0)}to{transform:scaleX(1)}}
+
+/* 打ち方 */
+.fmtsel{display:flex;gap:8px;flex-wrap:wrap}.fmtsel button{flex:1;min-width:130px;text-align:left;padding:10px 12px;line-height:1.3}.fmtsel button small{display:block;font-size:11px;color:var(--sub)}
+.fmtsel button[aria-pressed="true"]{border-color:var(--acc);color:var(--fg);background:#16202e}
+#tkhint{position:absolute;inset:0;display:none;flex-direction:column;align-items:center;justify-content:center;gap:10px;pointer-events:none;text-align:center}
+#tkmsg{font-size:14px;color:var(--sub)}#tkseq{min-height:34px;display:flex;gap:6px}
+.tkL{background:#1c3150;color:#bcd0f4}.tkR{background:#4a3516;color:#f4d9b0}.tkB{background:#3a2a48;color:#e3cff4}
+#tkseq i,.tkcode i{font-style:normal;display:inline-flex;align-items:center;justify-content:center;border-radius:6px}
+#tkseq i{min-width:34px;height:34px;font-size:15px;font-weight:700}
+.tkcode{display:inline-flex;gap:2px}.tkcode i{min-width:18px;height:18px;font-size:11px}
+body.fmt-tataku .zone,body.fmt-tataku .core,body.fmt-tataku #trace{display:none}
+body.fmt-tataku #pad{background:#121216}
+body.fmt-tataku #tkhint{display:flex}
+.tk-only{display:none}body.fmt-tataku .tk-only{display:inline-block}
+#practice.on{border-color:var(--acc);color:var(--acc)}
 </style>
 </head>
 <body>
@@ -85,16 +100,18 @@ input[type=text]{font:inherit;font-size:15px;color:var(--fg);background:#17171a;
 
 <section class="view" id="v-write">
   <div id="out"></div>
-  <div class="tools"><button id="blindbtn" class="pri">目を閉じる</button><button id="bs" title="長押しで書きかけを全部消す">1字消す<small>長押しで全部</small></button><button id="bsr" title="押している間、続けて消す">続けて消す<small>押してる間</small></button><button id="cut">区切る</button><button id="sharecur">共有</button></div>
+  <div class="tools"><button id="blindbtn" class="pri">目を閉じる</button><button id="bs" title="長押しで書きかけを全部消す">1字消す<small>長押しで全部</small></button><button id="bsr" title="押している間、続けて消す">続けて消す<small>押してる間</small></button><button id="cut">区切る</button><button id="sharecur">共有</button><button id="practice" class="tk-only">練習</button></div>
   <div id="pad"><div class="zone" id="z1"></div><div class="zone" id="z2"></div><div class="zone" id="z3"></div><div class="zone" id="z4"></div>
     <div class="core" id="c1"></div><div class="core" id="c2"></div><div class="core" id="c3"></div><div class="core" id="c4"></div>
-    <svg id="trace"></svg><div id="center"><div id="state"></div></div><div id="log"></div></div>
+    <svg id="trace"></svg><div id="tkhint"><div id="tkseq"></div><div id="tkmsg">どこでも、左右2本の指で叩く</div></div><div id="center"><div id="state"></div></div><div id="log"></div></div>
 </section>
 <button id="exitblind" aria-label="目を閉じるのをやめる">×</button>
 
 <section class="view hide" id="v-memos"><div id="memos"></div></section>
 
 <section class="view hide" id="v-shape"><div id="shape">
+  <h2>打ち方</h2>
+  <div class="fmtsel" id="fmtsel"><button data-fmt="hitofude">一筆書き<small>4つの場所をなぞる</small></button><button data-fmt="tataku">2本指で叩く<small>3種類のトン</small></button></div>
   <h2>設定</h2>
   <div class="opts"><label><input type="checkbox" id="o-speak" checked> 読み上げ</label><label><input type="checkbox" id="o-vib" checked> 震え</label><label><input type="checkbox" id="o-trace" checked> 線</label><label><input type="checkbox" id="o-log" checked> 判定</label></div>
   <h3>目を閉じるとき</h3>
@@ -178,13 +195,13 @@ function stroke(code){ const nm = "<b>" + nameOf(code) + "</b>";
   else { draft += m; saveAll(); say(shown(m)); log(nm + " → 「" + shown(m) + "」" + (USER[code] != null ? "(登録)" : "")); }
   showWrite(); }
 function drawTrace(){ const r = pad.getBoundingClientRect(); $("trace").innerHTML = opt("trace") && pts.length ? '<polyline points="' + pts.map(p => (p[0] - r.left).toFixed(1) + "," + (p[1] - r.top).toFixed(1)).join(" ") + '" fill="none" stroke="rgba(255,255,255,.5)" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>' : ""; }
-pad.addEventListener("pointerdown", e => { if (cur) return; e.preventDefault(); try { pad.setPointerCapture(e.pointerId); } catch (x) {}
+pad.addEventListener("pointerdown", e => { if (OPT.fmt === "tataku") { TK.down(e); return; } if (cur) return; e.preventDefault(); try { pad.setPointerCapture(e.pointerId); } catch (x) {}
   const z = zoneOf(e.clientX, e.clientY); cur = { id: e.pointerId, path: [z] }; pts = [[e.clientX, e.clientY]]; lit(z); buzz(10); drawTrace(); keepAwake(); });
-pad.addEventListener("pointermove", e => { if (!cur || e.pointerId !== cur.id) return;
+pad.addEventListener("pointermove", e => { if (OPT.fmt === "tataku") return; if (!cur || e.pointerId !== cur.id) return;
   (e.getCoalescedEvents ? e.getCoalescedEvents() : [e]).forEach(ev => { pts.push([ev.clientX, ev.clientY]); const c = coreOf(ev.clientX, ev.clientY);
     if (c && c !== cur.path[cur.path.length - 1]) { cur.path.push(c); lit(c); buzz(10); } }); drawTrace(); });
-pad.addEventListener("pointerup", e => { if (!cur || e.pointerId !== cur.id) return; const code = cur.path.join(""); cur = null; lit(0); setTimeout(() => { pts = []; drawTrace(); }, 300); stroke(code); });
-pad.addEventListener("pointercancel", e => { if (cur && e.pointerId === cur.id) { cur = null; lit(0); pts = []; drawTrace(); } });
+pad.addEventListener("pointerup", e => { if (OPT.fmt === "tataku") { TK.up(e); return; } if (!cur || e.pointerId !== cur.id) return; const code = cur.path.join(""); cur = null; lit(0); setTimeout(() => { pts = []; drawTrace(); }, 300); stroke(code); });
+pad.addEventListener("pointercancel", e => { if (OPT.fmt === "tataku") { TK.up(e, true); return; } if (cur && e.pointerId === cur.id) { cur = null; lit(0); pts = []; drawTrace(); } });
 /* 1字消す:押すと1字、長押しで書きかけを全部消す(少しの間「元に戻す」が出る) */
 let undoText = "";
 function clearDraft(){ if (!draft) { toast("書きかけは空"); return; } undoText = draft; draft = ""; saveAll(); buzz([40, 60, 40]); showWrite(); toastUndo("書きかけを全部消した"); }
@@ -207,6 +224,84 @@ function setBlind(on){ document.body.classList.toggle("blind", on); document.bod
 $("blindbtn").onclick = () => setBlind(true); $("exitblind").onclick = () => setBlind(false);
 async function keepAwake(){ try { if (!wakeLock && navigator.wakeLock && document.visibilityState === "visible") { wakeLock = await navigator.wakeLock.request("screen"); wakeLock.addEventListener("release", () => { wakeLock = null; }); } } catch (e) {} }
 document.addEventListener("visibilitychange", () => { if (document.visibilityState === "visible" && !$("v-write").classList.contains("hide")) keepAwake(); });
+
+/* ───── 打ち方2:2本指で叩く ─────
+   叩き方は3種類(左の指トン=L・右の指トン=R・2本いっしょにトン=B)。よく出る字ほど短い並びにし、どの字の並びもほかの字の頭にならない。
+   長押しは操作だけ:左=1字消す(打ちかけ中は打ちかけを取り消す)、右=改行、2本=区切り。字が1つ決まると「コッ」と震える */
+const TK_SYM = { L: "左", R: "右", B: "両" };
+const TK_FREQ = ["い", "う", "ん", "の", "し", "か", "て", "と", "た", "に", "な", "る", "は", "、", "が", "で", "こ", "き", "゛", "。", "っ", "ま", "も", "れ", "り", "く", "す", "よ", "お", "あ", "さ", "け", "ー", "ち", "つ", "そ", "め", "せ", "ょ", "わ", "え", "ひ", "み", "ろ", "じ", "だ", "ど", "ほ", "ふ", "や", "ね", "ゃ", "ゅ", "ゆ", "ば", "び", "ぶ", "べ", "ぼ", "ぱ", "ぴ", "ぷ", "ぺ", "ぽ", "ご", "ぎ", "ぐ", "げ", "ざ", "ず", "ぜ", "ぞ", "ぢ", "づ", "ぬ", "へ", "む", "を", "？", "！", "　", "ぁ", "ぃ", "ぅ", "ぇ", "ぉ", "ゎ"];
+const TK_CODE = (() => { // 3つに分かれる木(ハフマン)で、出やすさから長さを決め、短い順に「左 → 右 → 両」の順で並べる
+  const n0 = TK_FREQ.length; let items = TK_FREQ.map((ch, i) => ({ ch, w: 1 / Math.pow(i + 2, 1.05) }));
+  while ((items.length - 1) % 2) items.push({ ch: null, w: 0 });
+  let nodes = items.map(x => ({ w: x.w, leaf: x }));
+  while (nodes.length > 1) { nodes.sort((a, b) => a.w - b.w); const kids = nodes.splice(0, 3); nodes.push({ w: kids.reduce((s, k) => s + k.w, 0), kids }); }
+  const len = new Map(); (function walk(nd, d){ if (nd.leaf) len.set(nd.leaf, d); else nd.kids.forEach(k => walk(k, d + 1)); })(nodes[0], 0);
+  const order = items.slice().sort((a, b) => len.get(a) - len.get(b) || (a.ch == null) - (b.ch == null) || TK_FREQ.indexOf(a.ch) - TK_FREQ.indexOf(b.ch));
+  const map = {}, dec = {}; let code = 0, prev = len.get(order[0]);
+  order.forEach((it, i) => { const l = len.get(it); if (i) { code++; code *= Math.pow(3, l - prev); } prev = l;
+    let s = "", c = code; for (let k = 0; k < l; k++) { s = "LRB"[c % 3] + s; c = Math.floor(c / 3); }
+    if (it.ch != null) { map[it.ch] = s; dec[s] = it.ch; } });
+  return { map, dec, avg: TK_FREQ.reduce((a, ch, i) => a + map[ch].length / Math.pow(i + 2, 1.05), 0) / TK_FREQ.reduce((a, ch, i) => a + 1 / Math.pow(i + 2, 1.05), 0) }; })();
+const TK = (() => {
+  let seq = "", groups = [], ptr = new Map(), cl = null, cr = null, taps = [], chordGaps = [], practice = null;
+  const longTh = () => { if (taps.length < 8) return 380; const a = taps.slice().sort((x, y) => x - y), med = a[Math.floor(a.length / 2)]; return Math.max(260, Math.min(650, med * 2.4)); };
+  const chordWin = () => { if (chordGaps.length < 6) return 70; const a = chordGaps.slice().sort((x, y) => x - y); return Math.max(45, Math.min(110, a[Math.floor(a.length * 0.9)] * 1.5)); };
+  const bad = e => { const r = pad.getBoundingClientRect(), m = 10, big = (e.width || 0) > 46 || (e.height || 0) > 46; return big || e.clientX - r.left < m || r.right - e.clientX < m || e.clientY - r.top < m || r.bottom - e.clientY < m; };
+  function sideOf(x){ const r = pad.getBoundingClientRect(); if (cl == null) { cl = r.left + r.width * 0.38; cr = r.left + r.width * 0.62; }
+    const s = Math.abs(x - cl) <= Math.abs(x - cr) ? "L" : "R"; if (s === "L") cl = cl * 0.8 + x * 0.2; else cr = cr * 0.8 + x * 0.2;
+    if (cr - cl < 30) { const m = (cl + cr) / 2; cl = m - 15; cr = m + 15; } return s; }
+  function show(){ const el = $("tkseq"); if (el) el.innerHTML = seq ? seq.split("").map(c => '<i class="tk' + c + '">' + TK_SYM[c] + "</i>").join("") : "";
+    if (practice) $("tkmsg").textContent = "練習:「" + shown(practice.target) + "」を打つ"; else $("tkmsg").textContent = "どこでも、左右2本の指で叩く"; }
+  function commit(ch){ buzz(25);
+    if (practice) { const ok = ch === practice.target; log((ok ? "○ " : "× ") + "「" + shown(ch) + "」" + (ok ? "" : "(正しくは「" + shown(practice.target) + "」=" + TK_CODE.map[practice.target].split("").map(c => TK_SYM[c]).join("") + ")"), !ok);
+      if (ok) { practice.ok++; } practice.n++; say(ok ? "まる" : "ちがう"); setTimeout(nextPractice, 450); return; }
+    if (ch === "゛") { const last = draft.slice(-1), sq = CYCLE.find(c => c.includes(last)); if (!last || !sq) { buzz([10, 40, 10]); log("変えられる字がない", true); return; } const nx = sq[(sq.indexOf(last) + 1) % sq.length]; draft = draft.slice(0, -1) + nx; saveAll(); say(nx); log("「" + last + "」を「" + nx + "」に"); showWrite(); return; }
+    draft += ch; saveAll(); say(shown(ch)); log("<b>" + TK_CODE.map[ch].split("").map(c => TK_SYM[c]).join("") + "</b> → 「" + shown(ch) + "」"); showWrite(); }
+  function push(sym){ seq += sym; const ch = TK_CODE.dec[seq];
+    if (ch != null) { seq = ""; commit(ch); }
+    else if (!Object.keys(TK_CODE.dec).some(k => k.startsWith(seq))) { buzz([10, 40, 10]); log("<b>" + seq.split("").map(c => TK_SYM[c]).join("") + "</b> → その並びの字はない", true); seq = ""; }
+    show(); }
+  function command(sym){ if (seq) { seq = ""; buzz([10, 40, 10]); log("打ちかけを取り消した"); show(); return; }
+    if (practice && sym === "B") { stopPractice(); return; }
+    if (sym === "L") { const r = backspace(); r ? log("1字消す → " + r) : (buzz([10, 40, 10]), log("消すものがない", true)); }
+    else if (sym === "R") { draft += "\n"; saveAll(); say("改行"); log("改行"); }
+    else if (sym === "B") { if (cut()) log("区切った"); }
+    showWrite(); show(); }
+  function flush(){ while (groups.length && groups[0].done) { const g = groups.shift(); if (g.long) command(g.sym); else push(g.sym); } }
+  function down(e){ e.preventDefault(); if (bad(e)) return; try { pad.setPointerCapture(e.pointerId); } catch (x) {}
+    const now = performance.now(), open = groups.filter(g => !g.done && g.ptrs.size > 0);
+    if (open.length >= 2 || ptr.size >= 2) return;
+    const g0 = open.find(g => g.ptrs.size === 1 && !g.chord && now - g.t0 < chordWin());
+    if (g0) { g0.ptrs.add(e.pointerId); g0.chord = true; g0.xs.push(e.clientX); chordGaps.push(now - g0.t0); if (chordGaps.length > 40) chordGaps.shift(); ptr.set(e.pointerId, g0); return; }
+    const g = { t0: now, ptrs: new Set([e.pointerId]), xs: [e.clientX], chord: false, done: false, long: false };
+    g.timer = setTimeout(() => { if (!g.done) { g.long = true; buzz([12, 50, 12]); } }, longTh());
+    groups.push(g); ptr.set(e.pointerId, g); keepAwake(); }
+  function up(e, cancel){ const g = ptr.get(e.pointerId); if (!g) return; ptr.delete(e.pointerId); g.ptrs.delete(e.pointerId); if (g.ptrs.size) return;
+    clearTimeout(g.timer); const dur = performance.now() - g.t0; g.done = true;
+    if (cancel) { groups = groups.filter(x => x !== g); return; }
+    g.long = dur >= longTh(); if (!g.long) { taps.push(dur); if (taps.length > 40) taps.shift(); }
+    if (g.chord) { const a = Math.min(...g.xs), b = Math.max(...g.xs); if (cl != null) { cl = cl * 0.7 + a * 0.3; cr = cr * 0.7 + b * 0.3; } g.sym = "B"; } else g.sym = sideOf(g.xs[0]);
+    flush(); }
+  function nextPractice(){ if (!practice) return; const pool = TK_FREQ.slice(0, Math.min(TK_FREQ.length, practice.level)); practice.target = pool[Math.floor(Math.random() * pool.length)];
+    const b = document.body.classList.contains("blind"), was = OPT.bspeak; if (b) OPT.bspeak = true; say(shown(practice.target)); if (b) OPT.bspeak = was; show(); }
+  function startPractice(){ practice = { level: 12, n: 0, ok: 0 }; toast("練習:読み上げた字を打つ(2本の長押しで終わる)"); nextPractice(); $("practice").classList.add("on"); }
+  function stopPractice(){ if (!practice) return; toast("練習を終えた(" + practice.ok + "/" + practice.n + ")"); practice = null; $("practice").classList.remove("on"); show(); }
+  return { down, up, show, startPractice, stopPractice, isPracticing: () => !!practice, reset: () => { seq = ""; groups = []; ptr.clear(); show(); }, state: () => ({ seq, cl, cr, longTh: longTh(), chordWin: chordWin() }) }; })();
+$("practice").onclick = () => TK.isPracticing() ? TK.stopPractice() : TK.startPractice();
+function setFmt(f){ OPT.fmt = f; saveAll(); document.body.classList.toggle("fmt-tataku", f === "tataku"); document.querySelectorAll("#fmtsel [data-fmt]").forEach(b => b.setAttribute("aria-pressed", String(b.dataset.fmt === f))); TK.reset(); if (!$("v-shape").classList.contains("hide")) renderShape(); }
+$("fmtsel").addEventListener("click", e => { const b = e.target.closest("[data-fmt]"); if (b) setFmt(b.dataset.fmt); });
+function tkRulesHtml(){ const by = {}; TK_FREQ.forEach(ch => { const c = TK_CODE.map[ch]; (by[c.length] = by[c.length] || []).push(ch); });
+  const dots = c => '<span class="tkcode">' + c.split("").map(x => '<i class="tk' + x + '">' + TK_SYM[x] + "</i>").join("") + "</span>";
+  return "<h2>法則(2本指で叩く)</h2><ol>" +
+    "<li>画面の<b>どこでもいい</b>。左右2本の指(人差し指と中指など)で叩く。どちらの指かは、2本のいつもの位置をアプリが覚えて決める</li>" +
+    "<li>叩き方は3種類:<b>左のトン</b>・<b>右のトン</b>・<b>2本いっしょのトン</b>。この並びで1字になる</li>" +
+    "<li><b>字が決まると「コッ」と震える</b>。それが字と字の区切り。途中で手が止まっても、打ちかけは消えない</li>" +
+    "<li><b>よく出る字ほど短い並び</b>。どの字の並びも、ほかの字の頭にはならない</li>" +
+    "<li>長押しは操作だけ。押し続けて<b>「コッコッ」と2回震えたら離す</b>:<b>左=1字消す</b>(打ちかけ中なら打ちかけを取り消す)、<b>右=改行</b>、<b>2本=区切り</b>(次のメモへ)</li>" +
+    "<li>手のひらのような大きな触れ方、画面の縁からの触れ方、3本目の指は数えない</li>" +
+    "<li>長押しの境目と、「いっしょ」と見る幅は、あなたの叩き方に合わせて少しずつ動く(今は 長押し " + Math.round(TK.state().longTh) + "ミリ秒・いっしょ " + Math.round(TK.state().chordWin) + "ミリ秒)</li></ol>" +
+    "<div>平均すると1字に約" + TK_CODE.avg.toFixed(1) + "回叩く。まずは「練習」で、よく出る12字から体に入れる。</div>" +
+    "<h2>字と並び(短い順)</h2>" + Object.keys(by).sort((a, b) => a - b).map(l => "<h3>" + l + "回</h3>" + '<div class="rgrid">' + by[l].map(ch => '<span class="rchip"><span>' + esc(shown(ch)) + "<small>" + dots(TK_CODE.map[ch]) + "</small></span></span>").join("") + "</div>").join(""); }
 /* ───── 共有・コピー ───── */
 const AI = list => "次の" + (list.length > 1 ? list.length + "つのメモ(【】で区切ってある)を、それぞれ" : "ひらがなの文を、") + "意味が通る自然な漢字かな混じりの文に直してください。改行があるメモは、1行目が題名です(題名も直して、題名と分かる形で残す)。打ち間違いらしい所は直し、直した所を最後に一覧にしてください。" + (list.length > 1 ? "メモの区切りはそのまま残してください。" : "") + "\n\n" + (list.length > 1 ? list.map((m, i) => "【" + (i + 1) + "】" + m).join("\n\n") : list.join(""));
 async function share(text){ if (!text) { toast("共有するメモがない"); return; } if (navigator.share) { try { await navigator.share({ text }); return; } catch (e) { if (e && e.name === "AbortError") return; } } copy(text); }
@@ -244,7 +339,9 @@ function mini(code){ const p = code.split("").map(z => PT[z]), off = p.map((q, i
   return '<svg width="32" height="32" viewBox="0 0 32 32" aria-hidden="true"><rect x="1" y="1" width="30" height="30" rx="4" fill="none" stroke="#3a3a40"/><line x1="16" y1="2" x2="16" y2="30" stroke="#2a2a2e"/><line x1="2" y1="16" x2="30" y2="16" stroke="#2a2a2e"/>' +
     (p.length > 1 ? '<polyline points="' + off.map(q => q.join(",")).join(" ") + '" fill="none" stroke="#7fa7e8" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>' : "") + '<circle cx="' + p[0][0] + '" cy="' + p[0][1] + '" r="3.2" fill="#e9e6df"/></svg>'; }
 const chip = c => '<span class="rchip' + (USER[c] != null ? " mine" : "") + '" title="' + nameOf(c) + '">' + mini(c) + "<span>" + esc(shown(meaning(c))) + "<small>" + nameOf(c) + "</small></span></span>";
-function renderShape(){ const cs = codesByCost(), diag = c => { for (let i = 1; i < c.length; i++) if (+c[i - 1] + +c[i] === 5) return true; return false; }, back = c => c.length === 3 && c[0] === c[2];
+function renderShape(){ document.querySelectorAll("#fmtsel [data-fmt]").forEach(b => b.setAttribute("aria-pressed", String(b.dataset.fmt === (OPT.fmt || "hitofude"))));
+  if (OPT.fmt === "tataku") { $("rules").innerHTML = tkRulesHtml(); const mine = Object.keys(USER); $("reglist").innerHTML = '<div>登録は、今は一筆書きのときだけ使える。</div>'; return; }
+  const cs = codesByCost(), diag = c => { for (let i = 1; i < c.length; i++) if (+c[i - 1] + +c[i] === 5) return true; return false; }, back = c => c.length === 3 && c[0] === c[2];
   const grp = f => '<div class="rgrid">' + cs.filter(f).filter(c => !SPECIAL[c] && meaning(c) != null).map(chip).join("") + "</div>";
   const mine = Object.keys(USER).filter(k => !BUILTIN[k] || USER[k] !== BUILTIN[k]);
   $("reglist").innerHTML = mine.length ? mine.map(k => '<div class="ui">' + mini(k) + "<span>" + esc(shown(USER[k])) + '<small style="display:block;color:var(--sub);font-size:11px">' + nameOf(k) + '</small></span><button data-del="' + k + '">消す</button></div>').join("") : '<div>まだ登録はない。</div>';
@@ -280,8 +377,8 @@ function tab(t){ document.querySelectorAll(".tabs [data-tab]").forEach(b => b.se
 document.querySelector(".tabs").addEventListener("click", e => { const b = e.target.closest("[data-tab]"); if (b) tab(b.dataset.tab); });
 window.addEventListener("resize", layout); new ResizeObserver(layout).observe(pad);
 if ("serviceWorker" in navigator && location.protocol === "https:") navigator.serviceWorker.register("sw.js").catch(() => {});
-layout(); showWrite();
-window.MH = { BUILTIN, meaning };
+layout(); showWrite(); setFmt(OPT.fmt || "hitofude");
+window.MH = { BUILTIN, meaning, TK_CODE, TK, setFmt };
 </script>
 </body>
 </html>
