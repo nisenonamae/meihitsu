@@ -74,6 +74,10 @@ input[type=text]{font:inherit;font-size:15px;color:var(--fg);background:#17171a;
 .rchip.mine>span{color:var(--acc)}
 #toast{position:fixed;left:50%;bottom:calc(env(safe-area-inset-bottom,0px) + 18px);transform:translateX(-50%);background:#26262c;color:var(--fg);padding:8px 14px;border-radius:999px;font-size:13px;opacity:0;transition:opacity .2s;pointer-events:none;z-index:20}
 #toast.on{opacity:1}
+#toast.undo{pointer-events:auto;display:flex;align-items:center;gap:10px}#toast.undo button{padding:4px 10px;border-color:#4a5d80;color:#bcd0f4}
+#bs{position:relative;overflow:hidden;line-height:1.2;-webkit-user-select:none;user-select:none;-webkit-touch-callout:none}#bs small{display:block;font-size:10px;color:var(--sub)}
+#bsr{line-height:1.2;-webkit-user-select:none;user-select:none;-webkit-touch-callout:none;touch-action:none}#bsr small{display:block;font-size:10px;color:var(--sub)}#bsr.on{border-color:var(--ng);color:var(--ng)}
+#bs.hold::after{content:"";position:absolute;inset:0;background:rgba(224,138,122,.35);transform-origin:left;animation:bshold .7s linear forwards}@keyframes bshold{from{transform:scaleX(0)}to{transform:scaleX(1)}}
 </style>
 </head>
 <body>
@@ -81,7 +85,7 @@ input[type=text]{font:inherit;font-size:15px;color:var(--fg);background:#17171a;
 
 <section class="view" id="v-write">
   <div id="out"></div>
-  <div class="tools"><button id="blindbtn" class="pri">目を閉じる</button><button id="bs">1字消す</button><button id="cut">区切る</button><button id="sharecur">共有</button></div>
+  <div class="tools"><button id="blindbtn" class="pri">目を閉じる</button><button id="bs" title="長押しで書きかけを全部消す">1字消す<small>長押しで全部</small></button><button id="bsr" title="押している間、続けて消す">続けて消す<small>押してる間</small></button><button id="cut">区切る</button><button id="sharecur">共有</button></div>
   <div id="pad"><div class="zone" id="z1"></div><div class="zone" id="z2"></div><div class="zone" id="z3"></div><div class="zone" id="z4"></div>
     <div class="core" id="c1"></div><div class="core" id="c2"></div><div class="core" id="c3"></div><div class="core" id="c4"></div>
     <svg id="trace"></svg><div id="center"><div id="state"></div></div><div id="log"></div></div>
@@ -135,7 +139,9 @@ const opt = k => OPT[k] !== false;
 function saveAll(){ store("mh_memos", memos); store("mh_draft", draft); store("mh_user", USER); store("mh_opt", OPT); }
 function buzz(p){ if (!opt("vib")) return; try { navigator.vibrate && navigator.vibrate(p); } catch (e) {} }
 function say(s){ const blind = document.body.classList.contains("blind"); if ((blind ? OPT.bspeak !== true : !opt("speak")) || !window.speechSynthesis) return; try { speechSynthesis.cancel(); const u = new SpeechSynthesisUtterance(s); u.lang = "ja-JP"; u.rate = (OPT.rate || 14) / 10; speechSynthesis.speak(u); } catch (e) {} }
-function toast(s){ const t = $("toast"); t.textContent = s; t.classList.add("on"); clearTimeout(toast.h); toast.h = setTimeout(() => t.classList.remove("on"), 1600); }
+function toast(s){ const t = $("toast"); t.classList.remove("undo"); t.textContent = s; t.classList.add("on"); clearTimeout(toast.h); toast.h = setTimeout(() => t.classList.remove("on"), 1600); }
+function toastUndo(s){ const t = $("toast"); t.innerHTML = s + ' <button id="undo">元に戻す</button>'; t.classList.add("on", "undo"); clearTimeout(toast.h); toast.h = setTimeout(() => t.classList.remove("on", "undo"), 5000);
+  $("undo").onclick = () => { draft = undoText + draft; undoText = ""; saveAll(); showWrite(); t.classList.remove("on", "undo"); }; }
 /* ───── 場所 ───── */
 const gap = () => (OPT.gap || 4) / 100;
 function layout(){ const r = pad.getBoundingClientRect(), w = r.width / 2, h = r.height / 2, gx = w * gap(), gy = h * gap();
@@ -179,7 +185,22 @@ pad.addEventListener("pointermove", e => { if (!cur || e.pointerId !== cur.id) r
     if (c && c !== cur.path[cur.path.length - 1]) { cur.path.push(c); lit(c); buzz(10); } }); drawTrace(); });
 pad.addEventListener("pointerup", e => { if (!cur || e.pointerId !== cur.id) return; const code = cur.path.join(""); cur = null; lit(0); setTimeout(() => { pts = []; drawTrace(); }, 300); stroke(code); });
 pad.addEventListener("pointercancel", e => { if (cur && e.pointerId === cur.id) { cur = null; lit(0); pts = []; drawTrace(); } });
-$("bs").onclick = () => { const r = backspace(); if (!r) toast("消すものがない"); showWrite(); };
+/* 1字消す:押すと1字、長押しで書きかけを全部消す(少しの間「元に戻す」が出る) */
+let undoText = "";
+function clearDraft(){ if (!draft) { toast("書きかけは空"); return; } undoText = draft; draft = ""; saveAll(); buzz([40, 60, 40]); showWrite(); toastUndo("書きかけを全部消した"); }
+(() => { const b = $("bs"); let tm = null, long = false;
+  b.addEventListener("pointerdown", () => { long = false; b.classList.add("hold"); tm = setTimeout(() => { long = true; b.classList.remove("hold"); clearDraft(); }, 700); });
+  ["pointerup", "pointerleave", "pointercancel"].forEach(t => b.addEventListener(t, () => { clearTimeout(tm); b.classList.remove("hold"); }));
+  b.addEventListener("contextmenu", e => e.preventDefault());
+  b.addEventListener("click", () => { if (long) { long = false; return; } const r = backspace(); if (!r) toast("消すものがない"); showWrite(); }); })();
+/* 続けて消す:キーボードの delete を長押ししたように、押している間ずっと消す(書きかけが空になったら止まる) */
+(() => { const b = $("bsr"); let t1 = null, t2 = null, n = 0;
+  const del1 = () => { if (!draft) { stop(); return; } draft = draft.slice(0, -1); n++; saveAll(); buzz(6); showWrite(); };
+  const stop = () => { clearTimeout(t1); clearTimeout(t2); t1 = t2 = null; b.classList.remove("on"); };
+  const rep = () => { del1(); if (t1 || t2) t2 = setTimeout(rep, n > 12 ? 45 : 85); };
+  b.addEventListener("pointerdown", e => { e.preventDefault(); try { b.setPointerCapture(e.pointerId); } catch (x) {} n = 0; b.classList.add("on"); if (!draft) { toast("書きかけは空"); stop(); return; } del1(); t1 = setTimeout(rep, 380); });
+  ["pointerup", "pointercancel", "lostpointercapture"].forEach(t => b.addEventListener(t, stop));
+  b.addEventListener("contextmenu", e => e.preventDefault()); })();
 $("cut").onclick = () => { if (cut()) toast("区切った"); showWrite(); };
 $("sharecur").onclick = () => share(draft || (todays().slice(-1)[0] || {}).text || "");
 function setBlind(on){ document.body.classList.toggle("blind", on); document.body.classList.toggle("btext", OPT.btext === true); setTimeout(layout, 0); if (on) { keepAwake(); if (OPT.btext === true) toast("目を閉じるモード:右上の×で戻る"); } }
