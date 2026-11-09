@@ -236,10 +236,11 @@ document.addEventListener("visibilitychange", () => { if (document.visibilitySta
    1回目=5行のまとまり、2回目=その中の何番目の行、3回目=段(あ=左・い=右・う=左'・え=右'・お=両)。
    右'のまとまりの4番目=1字消す(2回)。両のまとまり=よく出る言葉(2回)。右'のまとまりの5番目=言葉の入口(+1回で、もう5つの言葉) */
 const GD_ORDER = ["L", "R", "l", "r", "B"], GD_IDX = { L: 0, R: 1, l: 2, r: 3, B: 4 };
-const GD_GROUPS = { L: ["あ", "か", "さ", "た", "な"], R: ["は", "ま", "や", "ら", "わ"], l: ["が", "ざ", "だ", "ば", "ぱ"], r: ["小", "記", "記2", "消す", "言葉"], B: ["語0", "語1", "語2", "語3", "語4"] };
+const GD_GROUPS = { L: ["あ", "か", "さ", "た", "な"], R: ["は", "ま", "や", "ら", "わ"], l: ["が", "ざ", "だ", "ば", "ぱ"], r: ["小", "記", "小2", "記3", "言葉"], B: ["語0", "語1", "語2", "語3", "語4"] };
 const GD_ROWS = { "あ": "あいうえお", "か": "かきくけこ", "さ": "さしすせそ", "た": "たちつてと", "な": "なにぬねの", "は": "はひふへほ", "ま": "まみむめも", "や": ["や", null, "ゆ", null, "よ"], "ら": "らりるれろ", "わ": ["わ", null, null, null, "を"],
-  "が": "がぎぐげご", "ざ": "ざじずぜぞ", "だ": "だぢづでど", "ば": "ばびぶべぼ", "ぱ": "ぱぴぷぺぽ", "小": ["ゃ", "っ", "ゅ", "ぇ", "ょ"], "記": ["ん", "ー", "、", "！", "。"], "記2": ["\n", "区切り", "゛", "？", "　"] };
-const GD_ROWNAME = { "小": "小さい字", "記": "記号", "記2": "記号2", "消す": "1字消す", "言葉": "言葉の入口" };
+  "が": "がぎぐげご", "ざ": "ざじずぜぞ", "だ": "だぢづでど", "ば": "ばびぶべぼ", "ぱ": "ぱぴぷぺぽ", "小": ["ゃ", "っ", "ゅ", "ぇ", "ょ"], "記": ["ん", "ー", "、", "！", "。"], "小2": "ぁぃぅぇぉ", "記3": ["゛", "？", "　", "「", "」"] };
+const GD_ROWNAME = { "小": "小さい字", "記": "記号", "小2": "小さい母音", "記3": "記号2", "言葉": "言葉の入口" };
+const GD_LONG = 450;   // ミリ秒:長押しの境目(越えたら「コッコッ」と震える)
 let GD_WORDS = load("mh_gdwords", ["ている", "という", "こと", "して", "した"]);
 const gdChars = row => { const cs = GD_ROWS[row]; return cs ? (Array.isArray(cs) ? cs : cs.split("")) : null; };
 function gdCodeOf(ch){ for (const g of GD_ORDER) for (let i = 0; i < 5; i++) { const cs = gdChars(GD_GROUPS[g][i]); if (!cs) continue; const v = cs.indexOf(ch); if (v >= 0) return g + GD_ORDER[i] + GD_ORDER[v]; }
@@ -276,9 +277,13 @@ const TK = (() => {
     draft += ch; saveAll(); say(shown(ch)); log("<b>" + tkJ(seq0) + "</b> → 「" + shown(ch) + "」" + (fixed ? "(際どい1回を読み直した)" : "")); showWrite(); }
   let seq0 = "", fixed = false;
 
+  function gdCmd(k){ buzz(25);
+    if (k === "L") { if (seq) { seq = ""; log("左の長押し → 打ちかけを取り消した"); } else if (!practice) { const r = backspace(); r ? log("左の長押し → " + r) : (buzz([10, 40, 10]), log("消すものがない", true)); } }
+    else if (k === "R") { seq = ""; if (!practice) { draft += "\n"; saveAll(); say("改行"); log("右の長押し → 改行"); } }
+    else if (k === "B") { seq = ""; if (practice) stopPractice(); else if (cut()) log("両の長押し → 区切った"); }
+    showWrite(); show(); }
   function gdPush(sym){ seq += sym; const g = seq[0], row = seq.length >= 2 ? GD_GROUPS[g][GD_IDX[seq[1]]] : null, bad = why => { buzz([10, 40, 10]); log("<b>" + tkJ(seq) + "</b> → " + why, true); seq = ""; show(); };
     if (seq.length === 2) {
-      if (row === "消す") { seq0 = seq; seq = ""; buzz(25); if (practice) { show(); return; } const r = backspace(); r ? log("<b>" + tkJ(seq0) + "</b> → " + r) : log("消すものがない", true); showWrite(); show(); return; }
       if (g === "B") { const w = GD_WORDS[GD_IDX[seq[1]]]; if (!w) return bad("その言葉はまだない"); seq0 = seq; fixed = false; seq = ""; commit(w); show(); return; }
       show(); return; }
     if (seq.length === 3) {
@@ -303,11 +308,17 @@ const TK = (() => {
     const now = performance.now(), o = F[s === "L" ? "R" : "L"];
     const f = { id: e.pointerId, x: e.clientX, t0: now, enc: !!o, mod: false, chord: false };
     if (o && !o.mod && !o.enc && !o.chord && now - o.t0 < CHORD) { f.chord = o.chord = true; }
-    F[s] = f; keepAwake(); }
+    F[s] = f; keepAwake();
+    if (OPT.fmt === "gyodan") f.ltimer = setTimeout(() => { if (F[s] !== f || f.mod) return; const p = F[s === "L" ? "R" : "L"];
+      if (f.chord && p && p.chord) { if (!p.long) { f.long = p.long = true; buzz([12, 50, 12]); } return; }
+      if (!f.chord && !(p && p.t0 < f.t0)) { f.long = true; buzz([12, 50, 12]); } }, GD_LONG); }
   function up(e, cancel){ const s = F.L && F.L.id === e.pointerId ? "L" : F.R && F.R.id === e.pointerId ? "R" : null; if (!s) return;
     const f = F[s], os = s === "L" ? "R" : "L", o = F[os]; F[s] = null; lastRel[s] = { t0: f.t0, tUp: performance.now() }; if (cancel) return;
     // 2本いっしょに触れた:2本とも続けて離れたら「いっしょのトン」、片方が残ったら、残った指は置いた指(もう片方は ' 付きのトン)
-    if (f.chord && f.pairUp) { clearTimeout(f.pairUp.timer); if (OPT.fmt === "gyodan") push("B"); else chordCmd(); return; }
+    clearTimeout(f.ltimer);
+    if (f.chord && f.pairUp) { clearTimeout(f.pairUp.timer); if (OPT.fmt === "gyodan") { if (f.long) gdCmd("B"); else push("B"); } else chordCmd(); return; }
+    if (OPT.fmt === "gyodan" && f.chord && f.long && o && o.chord) { o.pairUp = { timer: setTimeout(() => { o.pairUp = null; }, 400) }; return; }
+    if (OPT.fmt === "gyodan" && f.long && !f.chord && !f.mod) { gdCmd(s); return; }
     if (f.chord && o && o.chord) { o.pairUp = { timer: setTimeout(() => { o.pairUp = null; o.chord = false; f.chord = false; single(s, f, os, F[os] === o ? o : null); }, 90) }; return; }
     single(s, f, os, o); }
   function single(s, f, os, o){ if (f.mod) return;   // 置いていた指:何も打たない
@@ -347,14 +358,15 @@ function tkWordsWire(){ const box = $("reglist"); box.onclick = e => { const up 
 
 function gdRulesHtml(){ const chip = c => '<span class="tkcode">' + c.split("").map(x => '<i class="tk' + x + '">' + TK_SYM[x] + "</i>").join("") + "</span>";
   const rowCell = (g, i) => { const row = GD_GROUPS[g][i]; if (g === "B") return "<td><b>" + esc(GD_WORDS[i] || "(空き)") + "</b></td>"; const cs = gdChars(row);
-    return "<td><b>" + esc(GD_ROWNAME[row] || row + "行") + "</b>" + (cs ? '<small style="display:block">' + cs.map(c => c == null ? "・" : esc(c === "区切り" ? "区切" : shown(c))).join(" ") + "</small>" : "") + "</td>"; };
+    return "<td><b>" + esc(GD_ROWNAME[row] || row + "行") + "</b>" + (cs ? '<small style="display:block">' + cs.map(c => c == null ? "・" : escshown(c)).join(" ") + "</small>" : "") + "</td>"; };
   return "<h2>法則(行と段)</h2><ol>" +
     "<li>画面の<b>どこでもいい</b>。左右2本の指で叩く。トンは5通り:<b>左・右・左'・右'・両</b>(左'=右を置いたまま左でトン、右'=左を置いたまま右でトン、両=2本いっしょにトン)。<b>どこでもこの順番</b>を使う</li>" +
     "<li><b>どの字も3回</b>:1回目=5行のまとまり、2回目=その中の何番目の行、3回目=段</li>" +
     "<li><b>段</b>:あ=左・い=右・う=左'・え=右'・お=両</li>" +
     "<li>例:「き」は、か行(左右)+い段(右)で <b>左右右</b>。「の」は、な行(左両)+お段(両)で <b>左両両</b></li>" +
-    "<li><b>両のまとまり</b>は、よく出る言葉(2回で打てる)。<b>右'右'</b>=1字消す(2回)。<b>右'両</b>+1回=もう5つの言葉</li>" +
-    "<li><b>字が決まると「コッ」と震える</b>。3回ごとに決まるので、リズムで区切りが分かる。途中で間違えたら、残りを適当に叩いて3回で終わらせ、1字消す</li>" +
+    "<li><b>両のまとまり</b>は、よく出る言葉(2回で打てる)。<b>右'両</b>+1回=もう5つの言葉</li>" +
+    "<li><b>長押し</b>(押し続けて「コッコッ」と震えたら離す):<b>左=1字消す</b>(打ちかけの途中なら、打ちかけを取り消す)・<b>右=改行</b>・<b>両=区切り</b>(次のメモへ)</li>" +
+    "<li><b>字が決まると「コッ」と震える</b>。3回ごとに決まるので、リズムで区切りが分かる</li>" +
     "<li>手のひらのような大きな触れ方、画面の縁からの触れ方、3本目の指は数えない</li></ol>" +
     "<h2>行の表(1回目×2回目)</h2><div style=\"overflow-x:auto\"><table class=\"gdt\"><tr><th></th>" + GD_ORDER.map(x => "<th>2回目 " + chip(x) + "</th>").join("") + "</tr>" +
     GD_ORDER.map(g => "<tr><th>1回目 " + chip(g) + "</th>" + GD_ORDER.map((x, i) => rowCell(g, i)).join("") + "</tr>").join("") + "</table></div>" +
