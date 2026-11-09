@@ -115,15 +115,17 @@ const $ = id => document.getElementById(id), pad = $("pad");
 const esc = s => String(s).replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
 const ZN = { 1: "左上", 2: "右上", 3: "左下", 4: "右下" };
 /* ───── 形の決まり ───── */
+/* 動きは縦と横だけ(斜めはなし)。速い順:トン → 1回移る → 2回(往復 → 曲がる)→ 3回 → 4回 */
+const ADJ = { 1: [2, 3], 2: [1, 4], 3: [4, 1], 4: [3, 2] };   // 横 → 縦 の順
+const isDiag = (a, b) => +a + +b === 5;
+const hasDiag = code => { for (let i = 1; i < code.length; i++) if (isDiag(code[i - 1], code[i])) return true; return false; };
 function codesByCost(){
-  const out = ["1", "2", "3", "4"], adj = { 1: [2, 3, 4], 2: [1, 4, 3], 3: [4, 1, 2], 4: [3, 2, 1] };
-  const one = [], back = [], turn = [], three = [];
-  for (let a = 1; a <= 4; a++) adj[a].forEach((b, i) => one.push({ c: "" + a + b, d: i === 2 }));
-  one.sort((x, y) => x.d - y.d); one.forEach(x => out.push(x.c));
-  for (const s of one) { const a = +s.c[0], b = +s.c[1]; back.push({ c: s.c + a, d: s.d }); adj[b].filter(c => c !== a).forEach(c => turn.push({ c: s.c + c, d: s.d + (adj[b].indexOf(c) === 2) })); }
-  back.sort((x, y) => x.d - y.d); turn.sort((x, y) => x.d - y.d); back.forEach(x => out.push(x.c)); turn.forEach(x => out.push(x.c));
-  for (const t of turn.concat(back)) { const b = +t.c[1], c = +t.c[2]; adj[c].filter(d => d !== b).forEach(d => three.push(t.c + d)); }
-  return out.concat(three); }
+  let out = ["1", "2", "3", "4"], layer = ["1", "2", "3", "4"];
+  for (let n = 1; n <= 4; n++) { const next = [];
+    for (const c of layer) for (const b of ADJ[+c[c.length - 1]]) next.push(c + b);
+    const back = next.filter(c => c.length >= 3 && c[c.length - 1] === c[c.length - 3]), rest = next.filter(c => !back.includes(c));
+    out = out.concat(n === 2 ? back.concat(rest) : next); layer = next; }
+  return out; }
 const FREQ = "いうんのしかてとたにならはる、がでこき。っまもれりくすよおあさけーちつそめせょわえひみろじだどほふやねゃゅゆばびぶべぼぱぴぷぺぽごぎぐげざずぜぞぢづぬへむを？！".split("").concat(["　", "ぁ", "ぃ", "ぅ", "ぇ", "ぉ", "ゎ"]);
 const SPECIAL = { "434": "消す", "343": "゛", "2431": "\n", "12431": "区切り" };
 const BUILTIN = (() => { const m = Object.assign({}, SPECIAL), cs = codesByCost().filter(c => !SPECIAL[c]); let i = 0; for (const ch of FREQ) { while (m[cs[i]]) i++; m[cs[i]] = ch; i++; } return m; })();
@@ -168,6 +170,7 @@ function cut(){ if (!draft) { buzz([10, 40, 10]); log("今のメモが空なの�
 function backspace(){ if (draft) { const d = draft.slice(-1); draft = draft.slice(0, -1); saveAll(); buzz([10, 40, 10]); say("消した"); return "「" + shown(d) + "」を消した"; }
   const t = todays(); if (t.length) { const m = t[t.length - 1]; memos = memos.filter(x => x !== m); draft = m.text; saveAll(); buzz([10, 40, 10]); say("前のメモに戻した"); return "区切りを取り消して、前のメモに戻した"; } return null; }
 function stroke(code){ const nm = "<b>" + nameOf(code) + "</b>";
+  if (hasDiag(code)) { buzz([10, 40, 10]); log(nm + " → 斜めは使わない(縦か横に動かす)", true); if (regMode) toast("斜めを含む形は登録できない"); showWrite(); return; }
   if (regMode) { finishReg(code); return; }
   const m = meaning(code);
   if (m == null) { buzz([10, 40, 10]); log(nm + " → その形はない", true); }
@@ -247,21 +250,22 @@ const chip = c => '<span class="rchip' + (USER[c] != null ? " mine" : "") + '" t
 function renderShape(){ const cs = codesByCost(), diag = c => { for (let i = 1; i < c.length; i++) if (+c[i - 1] + +c[i] === 5) return true; return false; }, back = c => c.length === 3 && c[0] === c[2];
   const grp = f => '<div class="rgrid">' + cs.filter(f).filter(c => !SPECIAL[c] && meaning(c) != null).map(chip).join("") + "</div>";
   const mine = Object.keys(USER).filter(k => !BUILTIN[k] || USER[k] !== BUILTIN[k]);
-  $("reglist").innerHTML = mine.length ? mine.map(k => '<div class="ui">' + mini(k) + "<span>" + esc(shown(USER[k])) + '<small style="display:block;color:var(--sub);font-size:11px">' + nameOf(k) + '</small></span><button data-del="' + k + '">消す</button></div>').join("") : '<div>まだ登録はない。</div>';
+  $("reglist").innerHTML = mine.length ? mine.map(k => '<div class="ui">' + mini(k) + "<span>" + esc(shown(USER[k])) + '<small style="display:block;color:' + (hasDiag(k) ? "var(--ng)" : "var(--sub)") + ';font-size:11px">' + nameOf(k) + (hasDiag(k) ? "(斜めを含むので使えない。登録し直す)" : "") + '</small></span><button data-del="' + k + '">消す</button></div>').join("") : '<div>まだ登録はない。</div>';
   $("rules").innerHTML = "<h2>法則</h2><ol>" +
     "<li><b>1字=指を置いてから離すまでに、入った場所の順番</b>。途中の速さ・長さ・向きは見ない</li>" +
     "<li>場所に入ったと数えるのは、<b>まん中の十字から離れた奥</b>に入ったときだけ。まん中を通っても数えない</li>" +
-    "<li><b>よく出る字ほど短い形</b>。トン → 1回移る(縦横 → 斜め)→ 2回移る(往復 → 曲がる)→ 3回移る</li>" +
-    "<li>同じ長さの中では、<b>斜めに動く回数が少ない形が先</b>。そのうえで<b>置く場所は 左上 → 右上 → 左下 → 右下</b>、そこから<b>横へ → 縦へ → 斜めへ</b>の順に、よく出る字から並べる</li>" +
+    "<li><b>動きは縦と横だけ</b>。斜めに(隣を通らずに対角の場所へ)入ったら、何も打たない</li>" +
+    "<li><b>よく出る字ほど短い形</b>。トン → 1回移る → 2回移る(往復 → 曲がる)→ 3回移る → 4回移る</li>" +
+    "<li>同じ長さの中では、<b>置く場所は 左上 → 右上 → 左下 → 右下</b>の順、そこから<b>横へ → 縦へ</b>の順に、よく出る字から並べる</li>" +
     "<li>場所に入るたびに軽く震える</li>" +
     "<li><b>1行目が題名</b>:最初に題名を打って改行し、本文を書く。区切るたびに、題名つきのメモが1つずつメモの画面に貯まる。改行しなければ題名なし。題名はメモの画面であとから直せる</li>" +
     "<li>決まった形(絵の白い点に指を置いて、線のとおりになぞる):" + '<div class="rgrid">' + Object.keys(SPECIAL).map(chip).join("") + "</div>" +
     "1字消すは、書きかけが空なら区切りを取り消して前のメモに戻す。゛゜小は直前の字を 濁る → 半濁る → 小さく → 元 に変える</li>" +
     "<li>登録した形は組み込みより先に使う。<b>3回以上移る形</b>なら組み込みとかぶらない</li></ol>" +
-    "<h3>覚え方</h3><div>最初の16字「<b>いうんの・しかてとたにならはる、が</b>」で文章のおよそ4割になる。まずここだけ体で覚える。</div>" +
+    "<h3>覚え方</h3><div>トンと1回移るだけの12字「<b>いうんの・しかてとたになら</b>」で文章のおよそ3割になる。まずここだけ体で覚える。</div>" +
     "<h2>字と形(短い形から順に)</h2>" +
-    "<h3>トン</h3>" + grp(c => c.length === 1) + "<h3>1回・縦横</h3>" + grp(c => c.length === 2 && !diag(c)) + "<h3>1回・斜め</h3>" + grp(c => c.length === 2 && diag(c)) +
-    "<h3>2回・往復</h3>" + grp(back) + "<h3>2回・曲がる</h3>" + grp(c => c.length === 3 && !back(c)) + "<h3>3回移る</h3>" + grp(c => c.length === 4) +
+    "<h3>トン</h3>" + grp(c => c.length === 1) + "<h3>1回移る</h3>" + grp(c => c.length === 2) +
+    "<h3>2回・往復</h3>" + grp(back) + "<h3>2回・曲がる</h3>" + grp(c => c.length === 3 && !back(c)) + "<h3>3回移る</h3>" + grp(c => c.length === 4) + "<h3>4回移る</h3>" + grp(c => c.length === 5) +
     (Object.keys(USER).some(k => !BUILTIN[k]) ? "<h3>登録した形(4回以上も)</h3>" + '<div class="rgrid">' + Object.keys(USER).filter(k => !BUILTIN[k]).map(chip).join("") + "</div>" : ""); }
 $("reglist").addEventListener("click", e => { const b = e.target.closest("[data-del]"); if (!b) return; delete USER[b.dataset.del]; saveAll(); renderShape(); });
 $("regdraw").onclick = startReg;
