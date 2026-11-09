@@ -1,0 +1,266 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<meta name="theme-color" content="#0d0d0f">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icon-192.png">
+<link rel="apple-touch-icon" href="icon-192.png">
+<title>瞑筆</title>
+<style>
+:root{color-scheme:dark;--bg:#0d0d0f;--fg:#e9e6df;--sub:#8f8a80;--line:#2a2a2e;--acc:#7fa7e8;--ng:#e08a7a;--z1:#16263d;--z2:#3a2a12;--z3:#173322;--z4:#33172a}
+*{box-sizing:border-box}
+html,body{margin:0;height:100%;background:var(--bg);color:var(--fg);font-family:system-ui,"Hiragino Sans","Noto Sans JP",sans-serif;overscroll-behavior:none}
+body{display:flex;flex-direction:column;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px);height:100%}
+.top{display:flex;align-items:center;gap:8px;padding:8px 12px;border-bottom:1px solid var(--line)}
+.top h1{font-size:17px;margin:0 6px 0 0;font-weight:700;letter-spacing:.08em}
+.tabs{display:flex;gap:4px;margin-left:auto}
+.tabs button{border:0;background:none;color:var(--sub);font-size:14px;padding:6px 10px;border-radius:999px}
+.tabs button[aria-pressed="true"]{background:#222228;color:var(--fg)}
+button{font:inherit;font-size:13px;color:var(--fg);background:transparent;border:1px solid var(--line);border-radius:6px;padding:7px 11px}
+button.on{border-color:var(--acc);color:var(--acc)}
+button.pri{border-color:#4a5d80;color:#bcd0f4}
+.view{flex:1;display:flex;flex-direction:column;min-height:0}
+.hide{display:none!important}
+/* 書く */
+#out{max-height:22vh;overflow:auto;padding:8px 12px 4px;font-size:16px;line-height:1.45;word-break:break-all;white-space:pre-wrap}
+#out .ent{display:flex;gap:6px;color:var(--sub)}#out .ent i{font-style:normal;font-size:11px;color:#55524c;min-width:1.3em;padding-top:3px}
+#out .ent.cur{color:var(--fg);font-size:21px}#out .ph{color:#45423d}
+.tools{display:flex;gap:6px;flex-wrap:wrap;padding:4px 12px 8px}
+#pad{flex:1;position:relative;touch-action:none;user-select:none;-webkit-user-select:none;-webkit-touch-callout:none;overflow:hidden;min-height:240px}
+.zone{position:absolute;display:flex;align-items:center;justify-content:center;font-size:13px;color:var(--sub)}
+#z1{background:var(--z1)}#z2{background:var(--z2)}#z3{background:var(--z3)}#z4{background:var(--z4)}
+.zone.on{filter:brightness(1.9)}
+.core{position:absolute;border:1px dashed rgba(255,255,255,.1);pointer-events:none}
+#trace{position:absolute;inset:0;width:100%;height:100%;pointer-events:none}
+#center{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;pointer-events:none;text-align:center}
+#state{font-size:44px;font-weight:600;min-height:52px}
+#log{position:absolute;left:8px;right:8px;bottom:8px;max-height:26%;overflow:hidden;font-size:12px;color:var(--sub);line-height:1.5;pointer-events:none}
+#log b{color:var(--fg);font-weight:600}#log .ng{color:var(--ng)}
+/* 目を閉じる */
+body.blind .top,body.blind .tools,body.blind #log{display:none}
+body.blind #out{max-height:9vh;font-size:13px;opacity:.6}
+#exitblind{position:fixed;top:calc(env(safe-area-inset-top,0px) + 6px);right:6px;z-index:10;width:40px;height:40px;border-radius:50%;padding:0;font-size:18px;background:#1a1a1e;display:none}
+body.blind #exitblind{display:block}
+body.blind:not(.btext) #out,body.blind:not(.btext) #center{display:none}
+body.blind:not(.btext) #pad{margin-top:52px}
+/* メモ */
+#memos{flex:1;overflow:auto;padding:8px 12px 20px}
+.day{font-size:13px;color:var(--sub);margin:14px 0 6px;display:flex;align-items:center;gap:8px}.day span{margin-right:auto}
+.memo{border:1px solid var(--line);border-radius:10px;padding:10px 12px;margin:6px 0;background:#121215}
+.memo .tx{white-space:pre-wrap;word-break:break-all;font-size:16px;line-height:1.55}
+.memo{padding:0;overflow:hidden}.memo .mh{display:flex;align-items:center;gap:8px;padding:12px;cursor:pointer}.memo .mt{flex:1;font-size:17px;font-weight:600;line-height:1.4;word-break:break-all}.memo .mh time{font-size:12px;color:var(--sub)}
+.memo .nott{color:var(--sub);font-weight:400}.memo.open .mh{border-bottom:1px solid var(--line)}
+.memo .tx{padding:10px 12px 0}.memo .ft{padding:0 12px 10px}.memo .note{margin-right:auto;font-size:12px;color:var(--sub)}
+.memo .ed{display:block;width:calc(100% - 24px);margin:10px 12px 8px;font:inherit;font-size:16px;line-height:1.55;color:var(--fg);background:#17171a;border:1px solid var(--line);border-radius:8px;padding:8px}
+#out .et .ttl{display:block;font-weight:700}#out .ent.cur .et .ttl{font-size:17px;color:#bcd0f4}
+.memo .ft{display:flex;gap:6px;align-items:center;flex-wrap:wrap;margin-top:8px;font-size:12px;color:var(--sub)}.memo .ft time{margin-right:auto}
+.empty{color:var(--sub);font-size:14px;text-align:center;margin-top:30px;line-height:1.7}
+/* 形 */
+#shape{flex:1;overflow:auto;padding:8px 12px 24px;font-size:13px;color:var(--sub);line-height:1.7}
+#shape h2{font-size:15px;color:var(--fg);margin:14px 0 4px}
+#shape h3{font-size:14px;color:var(--fg);margin:10px 0 2px}
+#shape b{color:var(--fg)}#shape ol{margin:2px 0 6px;padding-left:1.3em}
+.opts{display:flex;flex-wrap:wrap;gap:6px 14px;align-items:center}
+.opts label{display:flex;align-items:center;gap:4px}
+input[type=range]{width:110px}
+input[type=text]{font:inherit;font-size:15px;color:var(--fg);background:#17171a;border:1px solid var(--line);border-radius:6px;padding:7px 9px;min-width:0;flex:1}
+.row{display:flex;gap:6px;align-items:center;flex-wrap:wrap;margin:4px 0}
+.ul{display:flex;flex-direction:column;gap:4px;margin-top:6px}
+.ui{display:flex;align-items:center;gap:8px;color:var(--fg);font-size:14px}.ui span{flex:1}
+.rgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:4px 8px;margin:4px 0 8px}
+.rchip{display:flex;align-items:center;gap:6px}.rchip>span{display:flex;flex-direction:column;color:var(--fg);font-size:16px;line-height:1.2}.rchip small{font-size:11px;color:var(--sub)}
+.rchip.mine>span{color:var(--acc)}
+#toast{position:fixed;left:50%;bottom:calc(env(safe-area-inset-bottom,0px) + 18px);transform:translateX(-50%);background:#26262c;color:var(--fg);padding:8px 14px;border-radius:999px;font-size:13px;opacity:0;transition:opacity .2s;pointer-events:none;z-index:20}
+#toast.on{opacity:1}
+</style>
+</head>
+<body>
+<div class="top"><h1>瞑筆</h1><div class="tabs"><button data-tab="write" aria-pressed="true">書く</button><button data-tab="memos" aria-pressed="false">メモ</button><button data-tab="shape" aria-pressed="false">形</button></div></div>
+
+<section class="view" id="v-write">
+  <div id="out"></div>
+  <div class="tools"><button id="blindbtn" class="pri">目を閉じる</button><button id="bs">1字消す</button><button id="cut">区切る</button><button id="sharecur">共有</button></div>
+  <div id="pad"><div class="zone" id="z1"></div><div class="zone" id="z2"></div><div class="zone" id="z3"></div><div class="zone" id="z4"></div>
+    <div class="core" id="c1"></div><div class="core" id="c2"></div><div class="core" id="c3"></div><div class="core" id="c4"></div>
+    <svg id="trace"></svg><div id="center"><div id="state"></div></div><div id="log"></div></div>
+</section>
+<button id="exitblind" aria-label="目を閉じるのをやめる">×</button>
+
+<section class="view hide" id="v-memos"><div id="memos"></div></section>
+
+<section class="view hide" id="v-shape"><div id="shape">
+  <h2>設定</h2>
+  <div class="opts"><label><input type="checkbox" id="o-speak" checked> 読み上げ</label><label><input type="checkbox" id="o-vib" checked> 震え</label><label><input type="checkbox" id="o-trace" checked> 線</label><label><input type="checkbox" id="o-log" checked> 判定</label></div>
+  <h3>目を閉じるとき</h3>
+  <div class="opts"><label><input type="checkbox" id="o-bspeak"> 読み上げる</label><label><input type="checkbox" id="o-btext"> 上に文を出す</label></div>
+  <div style="margin-top:2px">切っておくと、目を閉じるモードでは震えだけで知らせる。</div>
+  <div class="opts" style="margin-top:6px"><label>十字の太さ <input type="range" id="o-gap" min="1" max="45" value="4"></label><label>読む速さ <input type="range" id="o-rate" min="8" max="20" value="14"></label></div>
+  <h2>登録</h2>
+  <div class="row"><input type="text" id="regtext" placeholder="登録する言葉(例:という)"><button id="regdraw">形をなぞる</button></div>
+  <div id="regmsg">言葉を書いて「形をなぞる」を押すと、書く画面に移るので、パッドで形をなぞる。3回以上移る形なら、組み込みの字とかぶらない。</div>
+  <div class="ul" id="reglist"></div>
+  <div class="row" style="margin-top:8px"><button id="regexp">登録を書き出す(コピー)</button><button id="regimp">登録を読み込む</button></div>
+  <div id="rules"></div>
+</div></section>
+<div id="toast"></div>
+
+<script>
+const $ = id => document.getElementById(id), pad = $("pad");
+const esc = s => String(s).replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+const ZN = { 1: "左上", 2: "右上", 3: "左下", 4: "右下" };
+/* ───── 形の決まり ───── */
+function codesByCost(){
+  const out = ["1", "2", "3", "4"], adj = { 1: [2, 3, 4], 2: [1, 4, 3], 3: [4, 1, 2], 4: [3, 2, 1] };
+  const one = [], back = [], turn = [], three = [];
+  for (let a = 1; a <= 4; a++) adj[a].forEach((b, i) => one.push({ c: "" + a + b, d: i === 2 }));
+  one.sort((x, y) => x.d - y.d); one.forEach(x => out.push(x.c));
+  for (const s of one) { const a = +s.c[0], b = +s.c[1]; back.push({ c: s.c + a, d: s.d }); adj[b].filter(c => c !== a).forEach(c => turn.push({ c: s.c + c, d: s.d + (adj[b].indexOf(c) === 2) })); }
+  back.sort((x, y) => x.d - y.d); turn.sort((x, y) => x.d - y.d); back.forEach(x => out.push(x.c)); turn.forEach(x => out.push(x.c));
+  for (const t of turn.concat(back)) { const b = +t.c[1], c = +t.c[2]; adj[c].filter(d => d !== b).forEach(d => three.push(t.c + d)); }
+  return out.concat(three); }
+const FREQ = "いうんのしかてとたにならはる、がでこき。っまもれりくすよおあさけーちつそめせょわえひみろじだどほふやねゃゅゆばびぶべぼぱぴぷぺぽごぎぐげざずぜぞぢづぬへむを？！".split("").concat(["　", "ぁ", "ぃ", "ぅ", "ぇ", "ぉ", "ゎ"]);
+const SPECIAL = { "434": "消す", "343": "゛", "2431": "\n", "12431": "区切り" };
+const BUILTIN = (() => { const m = Object.assign({}, SPECIAL), cs = codesByCost().filter(c => !SPECIAL[c]); let i = 0; for (const ch of FREQ) { while (m[cs[i]]) i++; m[cs[i]] = ch; i++; } return m; })();
+const CYCLE = ["かが", "きぎ", "くぐ", "けげ", "こご", "さざ", "しじ", "すず", "せぜ", "そぞ", "ただ", "ちぢ", "つづっ", "てで", "とど", "はばぱ", "ひびぴ", "ふぶぷ", "へべぺ", "ほぼぽ", "あぁ", "いぃ", "うぅゔ", "えぇ", "おぉ", "やゃ", "ゆゅ", "よょ", "わゎ"];
+/* ───── 保存(この端末の中だけ) ───── */
+const load = (k, d) => { try { const v = localStorage.getItem(k); return v == null ? d : JSON.parse(v); } catch (e) { return d; } };
+const store = (k, v) => { try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) {} };
+let USER = load("mh_user", {}), memos = load("mh_memos", []), draft = load("mh_draft", ""), OPT = load("mh_opt", {});
+const meaning = code => USER[code] != null ? USER[code] : BUILTIN[code];
+const nameOf = code => code.split("").map(z => ZN[z]).join("→") + (code.length === 1 ? "トン" : "");
+const shown = s => s === "\n" ? "改行" : s === "　" ? "空白" : s === "゛" ? "゛゜小" : s === "区切り" ? "区切り(次へ)" : s;
+const opt = k => OPT[k] !== false;
+function saveAll(){ store("mh_memos", memos); store("mh_draft", draft); store("mh_user", USER); store("mh_opt", OPT); }
+function buzz(p){ if (!opt("vib")) return; try { navigator.vibrate && navigator.vibrate(p); } catch (e) {} }
+function say(s){ const blind = document.body.classList.contains("blind"); if ((blind ? OPT.bspeak !== true : !opt("speak")) || !window.speechSynthesis) return; try { speechSynthesis.cancel(); const u = new SpeechSynthesisUtterance(s); u.lang = "ja-JP"; u.rate = (OPT.rate || 14) / 10; speechSynthesis.speak(u); } catch (e) {} }
+function toast(s){ const t = $("toast"); t.textContent = s; t.classList.add("on"); clearTimeout(toast.h); toast.h = setTimeout(() => t.classList.remove("on"), 1600); }
+/* ───── 場所 ───── */
+const gap = () => (OPT.gap || 4) / 100;
+function layout(){ const r = pad.getBoundingClientRect(), w = r.width / 2, h = r.height / 2, gx = w * gap(), gy = h * gap();
+  const Z = { 1: [0, 0], 2: [w, 0], 3: [0, h], 4: [w, h] };
+  for (const k in Z) { Object.assign($("z" + k).style, { left: Z[k][0] + "px", top: Z[k][1] + "px", width: w + "px", height: h + "px" });
+    Object.assign($("c" + k).style, { left: (Z[k][0] + (k % 2 === 0 ? gx : 0)) + "px", top: (Z[k][1] + (k > 2 ? gy : 0)) + "px", width: (w - gx) + "px", height: (h - gy) + "px" }); }
+  $("trace").setAttribute("viewBox", "0 0 " + r.width + " " + r.height); }
+function zoneOf(x, y){ const r = pad.getBoundingClientRect(); return ((y - r.top) / r.height < 0.5 ? 0 : 2) + ((x - r.left) / r.width < 0.5 ? 1 : 2); }
+function coreOf(x, y){ const r = pad.getBoundingClientRect(), fx = (x - r.left) / r.width, fy = (y - r.top) / r.height, m = gap() / 2;
+  if (fx < 0 || fx > 1 || fy < 0 || fy > 1 || Math.abs(fx - 0.5) < m || Math.abs(fy - 0.5) < m) return 0; return (fy < 0.5 ? 0 : 2) + (fx < 0.5 ? 1 : 2); }
+function lit(z){ for (let k = 1; k <= 4; k++) $("z" + k).classList.toggle("on", k === z); }
+/* ───── 書く ───── */
+let regMode = false, logs = [], cur = null, pts = [], wakeLock = null;
+const todays = () => { const d = new Date().toDateString(); return memos.filter(m => new Date(m.t).toDateString() === d); };
+/* 1行目(改行より前)が題名。改行がなければ題名なし */
+const split = t => { const i = t.indexOf("\n"); return i < 0 ? { title: "", body: t } : { title: t.slice(0, i), body: t.slice(i + 1) }; };
+const memoHtml = t => { const s = split(t); return (s.title ? '<b class="ttl">' + esc(s.title) + "</b>" : "") + esc(s.body); };
+function showWrite(){ const prev = todays().slice(-6);
+  $("out").innerHTML = prev.map(m => '<div class="ent"><i>' + (todays().indexOf(m) + 1) + '</i><span class="et">' + memoHtml(m.text) + "</span></div>").join("") +
+    '<div class="ent cur"><i>' + (todays().length + 1) + '</i><span class="et">' + (draft ? memoHtml(draft) : '<span class="ph">' + (regMode ? "登録する形をなぞる" : "ここに書く(1行目は題名)") + "</span>") + "</span></div>";
+  $("out").scrollTop = 1e9; $("state").textContent = regMode ? "形をなぞる" : (draft.slice(-1) === "\n" ? "↵" : draft.slice(-1)) || ""; }
+function log(s, ng){ if (!opt("log")) return; logs.unshift((ng ? '<span class="ng">' : "") + s + (ng ? "</span>" : "")); logs = logs.slice(0, 6); $("log").innerHTML = logs.join("<br>"); }
+function cut(){ if (!draft) { buzz([10, 40, 10]); log("今のメモが空なので区切らない", true); return false; } memos.push({ id: "m" + Date.now().toString(36), t: Date.now(), text: draft }); draft = ""; saveAll(); buzz([30, 60, 30]); say("次へ"); return true; }
+function backspace(){ if (draft) { const d = draft.slice(-1); draft = draft.slice(0, -1); saveAll(); buzz([10, 40, 10]); say("消した"); return "「" + shown(d) + "」を消した"; }
+  const t = todays(); if (t.length) { const m = t[t.length - 1]; memos = memos.filter(x => x !== m); draft = m.text; saveAll(); buzz([10, 40, 10]); say("前のメモに戻した"); return "区切りを取り消して、前のメモに戻した"; } return null; }
+function stroke(code){ const nm = "<b>" + nameOf(code) + "</b>";
+  if (regMode) { finishReg(code); return; }
+  const m = meaning(code);
+  if (m == null) { buzz([10, 40, 10]); log(nm + " → その形はない", true); }
+  else if (m === "消す") { const r = backspace(); r ? log(nm + " → " + r) : log(nm + " → 消すものがない", true); }
+  else if (m === "区切り") { if (cut()) log(nm + " → 区切った"); }
+  else if (m === "゛") { const last = draft.slice(-1), seq = CYCLE.find(c => c.includes(last));
+    if (!last || !seq) { buzz([10, 40, 10]); log(nm + " → 変えられる字がない", true); } else { const nx = seq[(seq.indexOf(last) + 1) % seq.length]; draft = draft.slice(0, -1) + nx; saveAll(); buzz(8); say(nx); log(nm + " → 「" + last + "」を「" + nx + "」に"); } }
+  else { draft += m; saveAll(); buzz(8); say(shown(m)); log(nm + " → 「" + shown(m) + "」" + (USER[code] != null ? "(登録)" : "")); }
+  showWrite(); }
+function drawTrace(){ const r = pad.getBoundingClientRect(); $("trace").innerHTML = opt("trace") && pts.length ? '<polyline points="' + pts.map(p => (p[0] - r.left).toFixed(1) + "," + (p[1] - r.top).toFixed(1)).join(" ") + '" fill="none" stroke="rgba(255,255,255,.5)" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>' : ""; }
+pad.addEventListener("pointerdown", e => { if (cur) return; e.preventDefault(); try { pad.setPointerCapture(e.pointerId); } catch (x) {}
+  const z = zoneOf(e.clientX, e.clientY); cur = { id: e.pointerId, path: [z] }; pts = [[e.clientX, e.clientY]]; lit(z); buzz(10); drawTrace(); keepAwake(); });
+pad.addEventListener("pointermove", e => { if (!cur || e.pointerId !== cur.id) return;
+  (e.getCoalescedEvents ? e.getCoalescedEvents() : [e]).forEach(ev => { pts.push([ev.clientX, ev.clientY]); const c = coreOf(ev.clientX, ev.clientY);
+    if (c && c !== cur.path[cur.path.length - 1]) { cur.path.push(c); lit(c); buzz(10); } }); drawTrace(); });
+pad.addEventListener("pointerup", e => { if (!cur || e.pointerId !== cur.id) return; const code = cur.path.join(""); cur = null; lit(0); setTimeout(() => { pts = []; drawTrace(); }, 300); stroke(code); });
+pad.addEventListener("pointercancel", e => { if (cur && e.pointerId === cur.id) { cur = null; lit(0); pts = []; drawTrace(); } });
+$("bs").onclick = () => { const r = backspace(); if (!r) toast("消すものがない"); showWrite(); };
+$("cut").onclick = () => { if (cut()) toast("区切った"); showWrite(); };
+$("sharecur").onclick = () => share(draft || (todays().slice(-1)[0] || {}).text || "");
+function setBlind(on){ document.body.classList.toggle("blind", on); document.body.classList.toggle("btext", OPT.btext === true); setTimeout(layout, 0); if (on) { keepAwake(); if (OPT.btext === true) toast("目を閉じるモード:右上の×で戻る"); } }
+$("blindbtn").onclick = () => setBlind(true); $("exitblind").onclick = () => setBlind(false);
+async function keepAwake(){ try { if (!wakeLock && navigator.wakeLock && document.visibilityState === "visible") { wakeLock = await navigator.wakeLock.request("screen"); wakeLock.addEventListener("release", () => { wakeLock = null; }); } } catch (e) {} }
+document.addEventListener("visibilitychange", () => { if (document.visibilityState === "visible" && !$("v-write").classList.contains("hide")) keepAwake(); });
+/* ───── 共有・コピー ───── */
+const AI = list => "次の" + (list.length > 1 ? list.length + "つのメモ(【】で区切ってある)を、それぞれ" : "ひらがなの文を、") + "意味が通る自然な漢字かな混じりの文に直してください。改行があるメモは、1行目が題名です(題名も直して、題名と分かる形で残す)。打ち間違いらしい所は直し、直した所を最後に一覧にしてください。" + (list.length > 1 ? "メモの区切りはそのまま残してください。" : "") + "\n\n" + (list.length > 1 ? list.map((m, i) => "【" + (i + 1) + "】" + m).join("\n\n") : list.join(""));
+async function share(text){ if (!text) { toast("共有するメモがない"); return; } if (navigator.share) { try { await navigator.share({ text }); return; } catch (e) { if (e && e.name === "AbortError") return; } } copy(text); }
+function copy(text){ if (!text) { toast("コピーするメモがない"); return; } if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(text).then(() => toast("コピーした"), () => prompt("コピーしてください", text)); else prompt("コピーしてください", text); }
+/* ───── メモ ───── */
+let openId = null, editId = null;
+const dayKey = t => { const d = new Date(t); return d.getFullYear() + "/" + (d.getMonth() + 1) + "/" + d.getDate(); };
+function titleHtml(text){ const s = split(text); return s.title ? esc(s.title) : '<span class="nott">' + esc(text.replace(/\n/g, " ").slice(0, 24) || "(空)") + (text.length > 24 ? "…" : "") + "</span>"; }
+function memoRow(m, isDraft){ const id = isDraft ? "draft" : m.id, text = isDraft ? draft : m.text, open = openId === id, edit = editId === id;
+  return '<div class="memo' + (open ? " open" : "") + '"><div class="mh" data-open="' + id + '"><span class="mt">' + titleHtml(text) + "</span><time>" + (isDraft ? "書きかけ" : new Date(m.t).toTimeString().slice(0, 5)) + "</time></div>" +
+    (open ? (edit ? '<textarea class="ed" id="ed-' + id + '" rows="6">' + esc(text) + '</textarea><div class="ft"><span class="note">1行目が題名</span><button data-act="save" data-id="' + id + '" class="pri">保存</button><button data-act="cancel" data-id="' + id + '">やめる</button></div>'
+      : '<div class="tx">' + esc(split(text).body) + '</div><div class="ft"><button data-act="edit" data-id="' + id + '">編集</button><button data-act="share" data-id="' + id + '">共有</button><button data-act="copy" data-id="' + id + '">コピー</button><button data-act="ai" data-id="' + id + '">漢字用</button>' + (isDraft ? "" : '<button data-act="del" data-id="' + id + '" style="color:var(--ng)">消す</button>') + "</div>") : "") + "</div>"; }
+function showMemos(){ if (!memos.length && !draft) { $("memos").innerHTML = '<div class="empty">まだメモはない。<br>書く画面で、題名を打って改行し、本文を書いて区切ると、ここに題名が貯まる。</div>'; return; }
+  const by = {}; memos.slice().reverse().forEach(m => { (by[dayKey(m.t)] = by[dayKey(m.t)] || []).push(m); });
+  $("memos").innerHTML = (draft ? '<div class="day"><span>書きかけ</span></div>' + memoRow(null, true) : "") +
+    Object.keys(by).map(k => '<div class="day"><span>' + k + "(" + by[k].length + ')</span><button data-day="' + k + '" data-act="share-day">まとめて共有</button><button data-day="' + k + '" data-act="ai-day">漢字用コピー</button></div>' + by[k].map(m => memoRow(m, false)).join("")).join("");
+  if (editId) { const t = $("ed-" + editId); if (t) t.focus(); } }
+$("memos").addEventListener("click", e => { const h = e.target.closest("[data-open]"); if (h) { const id = h.dataset.open; openId = openId === id ? null : id; editId = null; showMemos(); return; }
+  const b = e.target.closest("button"); if (!b) return; const a = b.dataset.act, id = b.dataset.id, m = memos.find(x => x.id === id), text = id === "draft" ? draft : m ? m.text : "";
+  const dayList = k => memos.filter(x => dayKey(x.t) === k).map(x => x.text);
+  if (a === "edit") { editId = id; showMemos(); }
+  else if (a === "cancel") { editId = null; showMemos(); }
+  else if (a === "save") { const v = $("ed-" + id).value.replace(/\r/g, ""); if (id === "draft") draft = v; else if (m) { if (v.trim()) m.text = v; else if (confirm("空にすると、このメモを消します。消す?")) memos = memos.filter(x => x !== m); else return; } editId = null; saveAll(); showMemos(); toast("保存した"); }
+  else if (a === "share") share(text); else if (a === "copy") copy(text); else if (a === "ai") copy(AI([text]));
+  else if (a === "del" && m) { if (confirm("このメモを消す?")) { memos = memos.filter(x => x !== m); openId = null; saveAll(); showMemos(); } }
+  else if (a === "share-day") share(dayList(b.dataset.day).join("\n\n")); else if (a === "ai-day") copy(AI(dayList(b.dataset.day))); });
+/* ───── 形:登録・法則・表 ───── */
+function startReg(){ if (!$("regtext").value) { $("regmsg").textContent = "先に言葉を書いてください。"; return; } regMode = true; tab("write"); showWrite(); toast("登録する形をなぞる"); }
+function finishReg(code){ const t = $("regtext").value; regMode = false; const was = meaning(code);
+  if (was != null && USER[code] == null && !confirm("この形(" + nameOf(code) + ")は組み込みの「" + shown(was) + "」です。「" + t + "」で上書きしますか?")) { showWrite(); return; }
+  if (USER[code] != null && USER[code] !== t && !confirm("この形はもう「" + USER[code] + "」に登録しています。「" + t + "」に変えますか?")) { showWrite(); return; }
+  USER[code] = t; saveAll(); buzz(20); $("regtext").value = ""; $("regmsg").textContent = "「" + t + "」を " + nameOf(code) + " に登録しました。"; toast("登録した"); renderShape(); tab("shape"); }
+const PT = { 1: [8, 8], 2: [24, 8], 3: [8, 24], 4: [24, 24] };
+function mini(code){ const p = code.split("").map(z => PT[z]), off = p.map((q, i) => p.slice(0, i).some(s => s[0] === q[0] && s[1] === q[1]) ? [q[0] + 2.5, q[1] + 2.5] : q);
+  return '<svg width="32" height="32" viewBox="0 0 32 32" aria-hidden="true"><rect x="1" y="1" width="30" height="30" rx="4" fill="none" stroke="#3a3a40"/><line x1="16" y1="2" x2="16" y2="30" stroke="#2a2a2e"/><line x1="2" y1="16" x2="30" y2="16" stroke="#2a2a2e"/>' +
+    (p.length > 1 ? '<polyline points="' + off.map(q => q.join(",")).join(" ") + '" fill="none" stroke="#7fa7e8" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>' : "") + '<circle cx="' + p[0][0] + '" cy="' + p[0][1] + '" r="3.2" fill="#e9e6df"/></svg>'; }
+const chip = c => '<span class="rchip' + (USER[c] != null ? " mine" : "") + '" title="' + nameOf(c) + '">' + mini(c) + "<span>" + esc(shown(meaning(c))) + "<small>" + nameOf(c) + "</small></span></span>";
+function renderShape(){ const cs = codesByCost(), diag = c => { for (let i = 1; i < c.length; i++) if (+c[i - 1] + +c[i] === 5) return true; return false; }, back = c => c.length === 3 && c[0] === c[2];
+  const grp = f => '<div class="rgrid">' + cs.filter(f).filter(c => !SPECIAL[c] && meaning(c) != null).map(chip).join("") + "</div>";
+  const mine = Object.keys(USER).filter(k => !BUILTIN[k] || USER[k] !== BUILTIN[k]);
+  $("reglist").innerHTML = mine.length ? mine.map(k => '<div class="ui">' + mini(k) + "<span>" + esc(shown(USER[k])) + '<small style="display:block;color:var(--sub);font-size:11px">' + nameOf(k) + '</small></span><button data-del="' + k + '">消す</button></div>').join("") : '<div>まだ登録はない。</div>';
+  $("rules").innerHTML = "<h2>法則</h2><ol>" +
+    "<li><b>1字=指を置いてから離すまでに、入った場所の順番</b>。途中の速さ・長さ・向きは見ない</li>" +
+    "<li>場所に入ったと数えるのは、<b>まん中の十字から離れた奥</b>に入ったときだけ。まん中を通っても数えない</li>" +
+    "<li><b>よく出る字ほど短い形</b>。トン → 1回移る(縦横 → 斜め)→ 2回移る(往復 → 曲がる)→ 3回移る</li>" +
+    "<li>同じ長さの中では、<b>斜めに動く回数が少ない形が先</b>。そのうえで<b>置く場所は 左上 → 右上 → 左下 → 右下</b>、そこから<b>横へ → 縦へ → 斜めへ</b>の順に、よく出る字から並べる</li>" +
+    "<li>場所に入るたびに軽く震える</li>" +
+    "<li><b>1行目が題名</b>:最初に題名を打って改行し、本文を書く。区切るたびに、題名つきのメモが1つずつメモの画面に貯まる。改行しなければ題名なし。題名はメモの画面であとから直せる</li>" +
+    "<li>決まった形(絵の白い点に指を置いて、線のとおりになぞる):" + '<div class="rgrid">' + Object.keys(SPECIAL).map(chip).join("") + "</div>" +
+    "1字消すは、書きかけが空なら区切りを取り消して前のメモに戻す。゛゜小は直前の字を 濁る → 半濁る → 小さく → 元 に変える</li>" +
+    "<li>登録した形は組み込みより先に使う。<b>3回以上移る形</b>なら組み込みとかぶらない</li></ol>" +
+    "<h3>覚え方</h3><div>最初の16字「<b>いうんの・しかてとたにならはる、が</b>」で文章のおよそ4割になる。まずここだけ体で覚える。</div>" +
+    "<h2>字と形(短い形から順に)</h2>" +
+    "<h3>トン</h3>" + grp(c => c.length === 1) + "<h3>1回・縦横</h3>" + grp(c => c.length === 2 && !diag(c)) + "<h3>1回・斜め</h3>" + grp(c => c.length === 2 && diag(c)) +
+    "<h3>2回・往復</h3>" + grp(back) + "<h3>2回・曲がる</h3>" + grp(c => c.length === 3 && !back(c)) + "<h3>3回移る</h3>" + grp(c => c.length === 4) +
+    (Object.keys(USER).some(k => !BUILTIN[k]) ? "<h3>登録した形(4回以上も)</h3>" + '<div class="rgrid">' + Object.keys(USER).filter(k => !BUILTIN[k]).map(chip).join("") + "</div>" : ""); }
+$("reglist").addEventListener("click", e => { const b = e.target.closest("[data-del]"); if (!b) return; delete USER[b.dataset.del]; saveAll(); renderShape(); });
+$("regdraw").onclick = startReg;
+$("regexp").onclick = () => copy(JSON.stringify(USER));
+$("regimp").onclick = () => { const s = prompt("書き出した登録を貼ってください"); if (!s) return; try { Object.assign(USER, JSON.parse(s)); saveAll(); renderShape(); toast("読み込んだ"); } catch (e) { alert("読み取れませんでした"); } };
+/* 設定 */
+$("o-bspeak").checked = OPT.bspeak === true; $("o-bspeak").onchange = () => { OPT.bspeak = $("o-bspeak").checked; saveAll(); };
+$("o-btext").checked = OPT.btext === true; $("o-btext").onchange = () => { OPT.btext = $("o-btext").checked; saveAll(); document.body.classList.toggle("btext", OPT.btext); };
+[["o-speak", "speak"], ["o-vib", "vib"], ["o-trace", "trace"], ["o-log", "log"]].forEach(([id, k]) => { $(id).checked = opt(k); $(id).onchange = () => { OPT[k] = $(id).checked; saveAll(); if (k === "log") $("log").innerHTML = ""; }; });
+$("o-gap").value = OPT.gap || 4; $("o-gap").oninput = () => { OPT.gap = +$("o-gap").value; saveAll(); layout(); };
+$("o-rate").value = OPT.rate || 14; $("o-rate").onchange = () => { OPT.rate = +$("o-rate").value; saveAll(); say("このくらいの速さ"); };
+/* 画面の切り替え */
+function tab(t){ document.querySelectorAll(".tabs [data-tab]").forEach(b => b.setAttribute("aria-pressed", String(b.dataset.tab === t)));
+  ["write", "memos", "shape"].forEach(k => $("v-" + k).classList.toggle("hide", k !== t));
+  if (t === "write") { showWrite(); setTimeout(layout, 0); keepAwake(); } if (t === "memos") showMemos(); if (t === "shape") renderShape(); }
+document.querySelector(".tabs").addEventListener("click", e => { const b = e.target.closest("[data-tab]"); if (b) tab(b.dataset.tab); });
+window.addEventListener("resize", layout); new ResizeObserver(layout).observe(pad);
+if ("serviceWorker" in navigator && location.protocol === "https:") navigator.serviceWorker.register("sw.js").catch(() => {});
+layout(); showWrite();
+window.MH = { BUILTIN, meaning };
+</script>
+</body>
+</html>
