@@ -231,14 +231,18 @@ document.addEventListener("visibilitychange", () => { if (document.visibilitySta
    左のトン=左、右のトン=右。片方の指を置いたまま、もう片方でトン=「'」付き(左'・右')。この4種類の並びで1字。
    「'」になるのは、置いた指がトンを丸ごと包んでいたとき(先に触れて、後に離れた)だけ。速く叩いて指が重なっただけなら、ふつうのトン。
    2本いっしょのトン=打ちかけの取り消し(打ちかけがなければ1字消す)。字が決まると「コッ」と震える。並びは計算で決めたもので、変えない */
-const TK_TABLE = {"い": "LR", "う": "LL", "し": "Ll", "ん": "Lr", "の": "rR", "か": "rr", "て": "rl", "が": "rLL", "と": "rLR", "。": "rLr", "れ": "rLl", "に": "lLR", "っ": "lLr", "も": "lLl", "る": "lLL", "゛": "lRl", "た": "lRL", "ま": "lRr", "で": "lRR", "は": "llL", "、": "llR", "き": "lll", "さ": "llr", "お": "lrR", "\n": "lrr", "ゃ": "lrl", "よ": "lrL", "な": "RLl", "こ": "RLRL", "す": "RLRR", "け": "RLRr", "あ": "RLRl", "せ": "RLLL", "り": "RLLR", "ふ": "RLLl", "ひ": "RLLr", "ー": "RLrR", "そ": "RLrL", "区切り": "RLrr", "ぎ": "RLrl", "ち": "RRLL", "え": "RRLr", "ね": "RRLl", "く": "RRLR", "つ": "RRRL", "ほ": "RRRR", "ぷ": "RRRl", "ざ": "RRRr", "や": "RRlL", "　": "RRlr", "じ": "RRlR", "ぼ": "RRll", "ば": "RRrR", "ぽ": "RRrr", "ぅ": "RRrl", "ゅ": "RRrL", "ご": "RrLr", "ょ": "RrLR", "ぶ": "RrLL", "ぞ": "RrLl", "わ": "RrRL", "ゆ": "RrRR", "ぜ": "RrRl", "ぢ": "RrRr", "び": "RrrL", "べ": "RrrR", "ぃ": "Rrrl", "ず": "Rrrr", "む": "RrlL", "を": "RrlR", "ぁ": "Rrll", "ゎ": "Rrlr", "み": "RllL", "ど": "RllR", "？": "Rllr", "ぺ": "Rlll", "！": "Rlrr", "ぬ": "RlrL", "ぉ": "Rlrl", "づ": "RlrR", "め": "RlLR", "ろ": "RlLL", "げ": "RlLl", "ぱ": "RlLr", "だ": "RlRR", "ぴ": "RlRl", "ぐ": "RlRr", "へ": "RlRLR", "ぇ": "RlRLL"};
+const TK_TABLE = {"い": "rL", "う": "rR", "の": "rl", "ん": "rr", "か": "Rr", "と": "RLR", "。": "RLL", "は": "RLr", "た": "RLl", "が": "RRL", "す": "RRl", "る": "RRR", "お": "RRr", "て": "RlL", "で": "Rll", "り": "Rlr", "を": "RlR", "し": "lRL", "から": "lRr", "あ": "lRl", "に": "lRR", "っ": "lLL", "こと": "lLl", "、": "lLR", "つ": "lLr", "ま": "llL", "じ": "lll", "だ": "llR", "わ": "llr", "って": "lrr", "ぶ": "lrl", "ら": "lrR", "\n": "lrL", "き": "LrL", "ない": "Lrl", "も": "LrR", "く": "Lrr", "え": "LRLR", "区切り": "LRLr", "れ": "LRLl", "や": "LRLL", "言葉": "LRRL", "して": "LRRR", "なに": "LRRl", "そ": "LRRr", "おもう": "LRll", "ご": "LRlR", "いる": "LRlL", "けど": "LRlr", "ほ": "LRrL", "さ": "LRrR", "ね": "LRrr", "ている": "LRrl", "ょ": "LLLR", "よ": "LLLL", "む": "LLLl", "ば": "LLLr", "した": "LLRR", "な": "LLRL", "ち": "LLRr", "それ": "LLRl", "゛": "LLlR", "め": "LLlL", "ゅ": "LLlr", "ように": "LLll", "け": "LLrR", "ざ": "LLrr", "せ": "LLrl", "こ": "LLrL", "という": "Llll", "ぎ": "LllR", "たい": "LllL", "ぼ": "Lllr", "ので": "LlRR", "ず": "LlRL", "これ": "LlRr", "み": "LlRl", "ふ": "LlLRL", "ひ": "LlLRr", "べ": "LlLRR", "ゃ": "LlLRl", "？": "LlLrl", "ぱ": "LlLrR", "づ": "LlLrL", "ぅ": "LlLrr", "ある": "LlLLR", "ー": "LlLLL", "ぜ": "LlLLl", "ぞ": "LlLLr", "　": "LlLlL", "ぽ": "LlLlR", "ゆ": "LlLll", "！": "LlLlr", "ぷ": "LlrRL", "ぢ": "LlrRR", "ぬ": "LlrRr", "ゎ": "LlrRl", "ぃ": "LlrrL", "ぴ": "Llrrl", "ど": "Llrrr", "ぁ": "LlrrR", "ます": "LlrlR", "ぇ": "Llrlr", "げ": "Llrll", "ぉ": "LlrlL", "です": "LlrLl", "び": "LlrLL", "ぺ": "LlrLr", "ぐ": "LlrLRR", "ろ": "LlrLRL", "へ": "LlrLRl"};
 const TK_SYM = { L: "左", R: "右", l: "左'", r: "右'" };
-const TK_FREQ = Object.keys(TK_TABLE);
-const TK_CODE = { map: TK_TABLE, dec: Object.fromEntries(Object.entries(TK_TABLE).map(([k, v]) => [v, k])),
-  avg: (() => { const ks = TK_FREQ, wsum = ks.reduce((a, k, i) => a + 1 / Math.pow(i + 2, 1.05), 0); return ks.reduce((a, k, i) => a + TK_TABLE[k].length / Math.pow(i + 2, 1.05), 0) / wsum; })() };
+const TK_FREQ = Object.keys(TK_TABLE).filter(k => k.length === 1 && k !== "゛" && k !== "\n");
+/* 言葉:よく出る言葉は表の中に、自分の言葉は「言葉」の入口の先に置く(入口の先は、何を足しても、かなの並びに影響しない) */
+let TK_WORDS = load("mh_tkwords", []);
+const wordCode = i => "r".repeat(Math.floor(i / 3)) + "LRl"[i % 3];
+function tkDec(){ const d = {}; for (const [k, v] of Object.entries(TK_TABLE)) if (k !== "言葉") d[v] = k; TK_WORDS.forEach((w, i) => { d[TK_TABLE["言葉"] + wordCode(i)] = w; }); return d; }
+const TK_CODE = { map: TK_TABLE, get dec(){ return tkDec(); }, avg: 2.65 };
 const tkJ = c => c.split("").map(x => TK_SYM[x]).join("");
 const TK = (() => {
-  let seq = "", F = { L: null, R: null }, cl = null, cr = null, practice = null;
+  let seq = "", alts = [], F = { L: null, R: null }, cl = null, cr = null, practice = null, lastRel = { L: null, R: null };
+  const NEAR = 45;   // ミリ秒:これより近いと「どちらとも取れる」1回として覚えておく
   const CHORD = 35;   // 2本がこれより近くに触れ始めたら「いっしょ」の候補
   const bad = e => { const r = pad.getBoundingClientRect(), m = 10, big = (e.width || 0) > 46 || (e.height || 0) > 46; return big || e.clientX - r.left < m || r.right - e.clientX < m || e.clientY - r.top < m || r.bottom - e.clientY < m; };
   function sideFor(x){ const r = pad.getBoundingClientRect(); if (cl == null) { cl = r.left + r.width * 0.38; cr = r.left + r.width * 0.62; }
@@ -252,12 +256,17 @@ const TK = (() => {
       if (ok) practice.ok++; practice.n++; say(ok ? "まる" : "ちがう"); setTimeout(nextPractice, 450); return; }
     if (ch === "区切り") { if (cut()) log("区切った"); showWrite(); return; }
     if (ch === "゛") { const last = draft.slice(-1), sq = CYCLE.find(c => c.includes(last)); if (!last || !sq) { buzz([10, 40, 10]); log("変えられる字がない", true); return; } const nx = sq[(sq.indexOf(last) + 1) % sq.length]; draft = draft.slice(0, -1) + nx; saveAll(); say(nx); log("「" + last + "」を「" + nx + "」に"); showWrite(); return; }
-    draft += ch; saveAll(); say(shown(ch)); log("<b>" + tkJ(TK_TABLE[ch]) + "</b> → 「" + shown(ch) + "」"); showWrite(); }
-  function push(sym){ seq += sym; const ch = TK_CODE.dec[seq];
-    if (ch != null) { seq = ""; commit(ch); }
-    else if (!Object.keys(TK_CODE.dec).some(k => k.startsWith(seq))) { buzz([10, 40, 10]); log("<b>" + tkJ(seq) + "</b> → その並びの字はない", true); seq = ""; }
-    show(); }
-  function chordCmd(){ if (seq) { seq = ""; buzz([10, 40, 10]); log("打ちかけを取り消した"); }
+    draft += ch; saveAll(); say(shown(ch)); log("<b>" + tkJ(seq0) + "</b> → 「" + shown(ch) + "」" + (fixed ? "(際どい1回を読み直した)" : "")); showWrite(); }
+  let seq0 = "", fixed = false;
+  function push(sym, alt){ seq += sym; alts.push(alt || null); const dec = tkDec(), keys = Object.keys(dec), pre = q => keys.some(k => k.startsWith(q));
+    if (dec[seq] != null) { seq0 = seq; fixed = false; const ch = dec[seq]; seq = ""; alts = []; commit(ch); show(); return; }
+    if (seq === TK_TABLE["言葉"] && !TK_WORDS.length) { buzz([10, 40, 10]); log("言葉がまだない(形の画面で足す)", true); seq = ""; alts = []; show(); return; }
+    if (pre(seq)) { show(); return; }
+    for (let k = alts.length - 1; k >= 0; k--) { if (!alts[k]) continue; const cand = seq.slice(0, k) + alts[k] + seq.slice(k + 1);
+      if (dec[cand] != null) { seq0 = cand; fixed = true; const ch = dec[cand]; seq = ""; alts = []; commit(ch); show(); return; }
+      if (pre(cand)) { seq = cand; alts[k] = null; show(); return; } }
+    buzz([10, 40, 10]); log("<b>" + tkJ(seq) + "</b> → その並びの字はない", true); seq = ""; alts = []; show(); }
+  function chordCmd(){ if (seq) { seq = ""; alts = []; buzz([10, 40, 10]); log("打ちかけを取り消した"); }
     else if (practice) { stopPractice(); return; }
     else { const r = backspace(); r ? log("2本いっしょ → " + r) : (buzz([10, 40, 10]), log("消すものがない", true)); }
     showWrite(); show(); }
@@ -268,23 +277,46 @@ const TK = (() => {
     if (o && !o.mod && !o.enc && !o.chord && now - o.t0 < CHORD) { f.chord = o.chord = true; }
     F[s] = f; keepAwake(); }
   function up(e, cancel){ const s = F.L && F.L.id === e.pointerId ? "L" : F.R && F.R.id === e.pointerId ? "R" : null; if (!s) return;
-    const f = F[s], os = s === "L" ? "R" : "L", o = F[os]; F[s] = null; if (cancel) return;
+    const f = F[s], os = s === "L" ? "R" : "L", o = F[os]; F[s] = null; lastRel[s] = { t0: f.t0, tUp: performance.now() }; if (cancel) return;
     // 2本いっしょに触れた:2本とも続けて離れたら「いっしょのトン」、片方が残ったら、残った指は置いた指(もう片方は ' 付きのトン)
     if (f.chord && f.pairUp) { clearTimeout(f.pairUp.timer); chordCmd(); return; }
     if (f.chord && o && o.chord) { o.pairUp = { timer: setTimeout(() => { o.pairUp = null; o.chord = false; f.chord = false; single(s, f, os, F[os] === o ? o : null); }, 90) }; return; }
     single(s, f, os, o); }
   function single(s, f, os, o){ if (f.mod) return;   // 置いていた指:何も打たない
-    const shifted = !!(o && F[os] === o && o.t0 <= f.t0 && (f.enc || o.chord === false)); if (shifted) o.mod = true;
-    learn(s, f.x); push(shifted ? s.toLowerCase() : s); }
+    const now = performance.now(), shifted = !!(o && F[os] === o && o.t0 <= f.t0 && (f.enc || o.chord === false)); if (shifted) o.mod = true;
+    // 際どい1回:置いた指が、トンのほんの少し前に触れただけ(→ ふつうとも取れる)/置いた指が、トンのほんの少し前に離れた(→ ' とも取れる)
+    let alt = null; const lr = lastRel[os];
+    if (shifted && f.t0 - o.t0 < NEAR) alt = s;
+    else if (!shifted && f.enc && lr && lr.t0 < f.t0 && now - lr.tUp < NEAR) alt = s.toLowerCase();
+    learn(s, f.x); push(shifted ? s.toLowerCase() : s, alt); }
   function nextPractice(){ if (!practice) return; const pool = TK_FREQ.filter(k => k !== "区切り" && k !== "\n" && k !== "゛").slice(0, practice.level); practice.target = pool[Math.floor(Math.random() * pool.length)];
     const b = document.body.classList.contains("blind"), was = OPT.bspeak; if (b) OPT.bspeak = true; say(shown(practice.target)); if (b) OPT.bspeak = was; show(); }
   function startPractice(){ practice = { level: 12, n: 0, ok: 0 }; toast("練習:読み上げた字を打つ(2本いっしょのトンで終わる)"); nextPractice(); $("practice").classList.add("on"); }
   function stopPractice(){ if (!practice) return; toast("練習を終えた(" + practice.ok + "/" + practice.n + ")"); practice = null; $("practice").classList.remove("on"); show(); }
-  return { down, up, show, startPractice, stopPractice, isPracticing: () => !!practice, reset: () => { seq = ""; F = { L: null, R: null }; show(); }, state: () => ({ seq, cl, cr }) }; })();
+  return { down, up, show, startPractice, stopPractice, isPracticing: () => !!practice, reset: () => { seq = ""; alts = []; F = { L: null, R: null }; show(); }, state: () => ({ seq, cl, cr }) }; })();
 $("practice").onclick = () => TK.isPracticing() ? TK.stopPractice() : TK.startPractice();
 function setFmt(f){ OPT.fmt = f; saveAll(); document.body.classList.toggle("fmt-tataku", f === "tataku"); document.querySelectorAll("#fmtsel [data-fmt]").forEach(b => b.setAttribute("aria-pressed", String(b.dataset.fmt === f))); TK.reset(); if (!$("v-shape").classList.contains("hide")) renderShape(); }
 $("fmtsel").addEventListener("click", e => { const b = e.target.closest("[data-fmt]"); if (b) setFmt(b.dataset.fmt); });
-function tkRulesHtml(){ const by = {}; TK_FREQ.forEach(ch => { const c = TK_TABLE[ch]; (by[c.length] = by[c.length] || []).push(ch); });
+/* 自分の文から言葉の候補を作る:2〜5字の並びを数え、1字ずつ打つより短くなる分が大きいものを選ぶ */
+function tkCandidates(){ const text = memos.map(m => m.text).concat([draft]).join("\n"), cnt = new Map();
+  for (const line of text.split(/[\n、。？！　\s]+/)) for (let n = 2; n <= 5; n++) for (let i = 0; i + n <= line.length; i++) { const w = line.slice(i, i + n); if (/^[ぁ-ゖー]+$/.test(w)) cnt.set(w, (cnt.get(w) || 0) + 1); }
+  const own = new Set(Object.keys(TK_TABLE)), wlen = TK_TABLE["言葉"].length + 1;
+  const scored = [...cnt].filter(([w, c]) => c >= 3 && !own.has(w)).map(([w, c]) => { const per = w.split("").reduce((a, ch) => a + (TK_TABLE[ch] ? TK_TABLE[ch].length : 4), 0); return { w, c, save: (per - wlen) * c }; }).filter(x => x.save > 0).sort((a, b) => b.save - a.save);
+  const pick = []; for (const x of scored) { if (pick.some(p => p.w.includes(x.w) || x.w.includes(p.w))) continue; pick.push(x); if (pick.length >= 15) break; } return pick; }
+function tkWordsHtml(){ const chips = c => '<span class="tkcode">' + c.split("").map(x => '<i class="tk' + x + '">' + TK_SYM[x] + "</i>").join("") + "</span>";
+  return '<div class="row"><input type="text" id="tkwtext" placeholder="足す言葉(例:すうがく)"><button id="tkwadd">言葉に足す</button></div>' +
+    '<div>「言葉」の入口(' + chips(TK_TABLE["言葉"]) + ')のあとに続けて叩く。上にある言葉ほど短い。</div>' +
+    '<div class="ul">' + (TK_WORDS.length ? TK_WORDS.map((w, i) => '<div class="ui"><span>' + esc(w) + '<small style="display:block">' + chips(TK_TABLE["言葉"] + wordCode(i)) + '</small></span>' + (i ? '<button data-tkup="' + i + '">↑</button>' : "") + '<button data-tkdel="' + i + '">消す</button></div>').join("") : "<div>まだない。</div>") + "</div>" +
+    '<div class="row" style="margin-top:8px"><button id="tkwscan">自分の文から作り直す</button></div><div id="tkwcand"></div>'; }
+function tkWordsWire(){ const box = $("reglist"); box.onclick = e => { const up = e.target.closest("[data-tkup]"), del = e.target.closest("[data-tkdel]"), add = e.target.closest("#tkwadd"), scan = e.target.closest("#tkwscan"), use = e.target.closest("[data-tkuse]");
+    if (up) { const i = +up.dataset.tkup; [TK_WORDS[i - 1], TK_WORDS[i]] = [TK_WORDS[i], TK_WORDS[i - 1]]; }
+    else if (del) TK_WORDS.splice(+del.dataset.tkdel, 1);
+    else if (add) { const w = $("tkwtext").value.trim(); if (!w) return; if (!TK_WORDS.includes(w)) TK_WORDS.push(w); }
+    else if (scan) { const c = tkCandidates(); $("tkwcand").innerHTML = c.length ? "<h3>候補(よく書いていて、まとめると速くなる順)</h3>" + c.map((x, i) => '<label class="ui"><input type="checkbox" data-cand="' + esc(x.w) + '"' + (i < 8 ? " checked" : "") + "><span>" + esc(x.w) + '<small style="display:block;color:var(--sub)">' + x.c + "回書いた・約" + x.save + "回叩くのが減る</small></span></label>").join("") + '<div class="row"><button data-tkuse="replace" class="pri">この言葉で作り直す</button><button data-tkuse="add">今の言葉に足す</button></div><div>作り直すと、言葉の並びだけが変わる。かなの並びは変わらない。</div>' : "<div>まだ候補がない(同じ言葉を3回以上書くと出る)。</div>"; return; }
+    else if (use) { const ws = [...document.querySelectorAll("[data-cand]:checked")].map(x => x.dataset.cand); if (use.dataset.tkuse === "replace") TK_WORDS = ws; else ws.forEach(w => { if (!TK_WORDS.includes(w)) TK_WORDS.push(w); }); toast("言葉を" + (use.dataset.tkuse === "replace" ? "作り直した" : "足した")); }
+    else return;
+    store("mh_tkwords", TK_WORDS); renderShape(); }; }
+function tkRulesHtml(){ const by = {}; Object.keys(TK_TABLE).forEach(ch => { const c = TK_TABLE[ch]; (by[c.length] = by[c.length] || []).push(ch); });
   const chips = c => '<span class="tkcode">' + c.split("").map(x => '<i class="tk' + x + '">' + TK_SYM[x] + "</i>").join("") + "</span>";
   return "<h2>法則(置いて叩く)</h2><ol>" +
     "<li>画面の<b>どこでもいい</b>。左右2本の指(人差し指と中指)で叩く。どちらの指かは、2本の並び(左にある方が左)で決める</li>" +
@@ -292,10 +324,13 @@ function tkRulesHtml(){ const by = {}; TK_FREQ.forEach(ch => { const c = TK_TABL
     "<li>置いていた指を離しても、その間にもう片方が叩いていれば<b>何も打たない</b>。「'」になるのは、置いた指が<b>先に触れて、後に離れた</b>ときだけ。速く叩いて指が少し重なっただけなら、ふつうのトン</li>" +
     "<li><b>字が決まると「コッ」と震える</b>。それが字と字の区切り。途中で手が止まっても、打ちかけは消えない</li>" +
     "<li><b>2本いっしょにトン</b>=打ちかけの取り消し(打ちかけがなければ1字消す)。改行・区切り・゛゜小は、下の並びにある</li>" +
-    "<li>並びは、よく出る字ほど速く打てるように計算で決めたもの(平均で1字に約" + TK_CODE.avg.toFixed(1) + "回)。変わらないので、体で覚えてよい</li>" +
+    "<li><b>よく出る言葉</b>(ている・という・こと・して など)は、1字と同じように1つの並びで打てる</li>" +
+    "<li><b>自分の言葉</b>は「言葉」の入口のあとに続けて叩く。形の画面の「登録」で足したり、自分の文から作り直したりできる。何を足しても、かなの並びは変わらない</li>" +
+    "<li>「'」かどうか<b>際どかった1回</b>は覚えておき、並びが行き止まったら、その1回を読み直して字になるならそれを採る</li>" +
+    "<li>並びは、よく出る字ほど速く打てるように計算で決めたもの(見本の文で1字に約2.7回)。もう変わらないので、体で覚えてよい</li>" +
     "<li>手のひらのような大きな触れ方、画面の縁からの触れ方、3本目の指は数えない</li></ol>" +
     "<div>まずは「練習」で、よく出る12字から体に入れる。</div>" +
-    "<h2>字と並び(短い順)</h2>" + Object.keys(by).sort((a, b) => a - b).map(l => "<h3>" + l + "回</h3>" + '<div class="rgrid">' + by[l].map(ch => '<span class="rchip"><span>' + esc(ch === "区切り" ? "区切り(次へ)" : shown(ch)) + "<small>" + chips(TK_TABLE[ch]) + "</small></span></span>").join("") + "</div>").join(""); }
+    "<h2>字と並び(短い順)</h2>" + Object.keys(by).sort((a, b) => a - b).map(l => "<h3>" + l + "回</h3>" + '<div class="rgrid">' + by[l].map(ch => '<span class="rchip"><span>' + esc(ch === "区切り" ? "区切り(次へ)" : ch === "言葉" ? "言葉の入口" : shown(ch)) + "<small>" + chips(TK_TABLE[ch]) + "</small></span></span>").join("") + "</div>").join(""); }
 /* ───── 共有・コピー ───── */
 const AI = list => "次の" + (list.length > 1 ? list.length + "つのメモ(【】で区切ってある)を、それぞれ" : "ひらがなの文を、") + "意味が通る自然な漢字かな混じりの文に直してください。改行があるメモは、1行目が題名です(題名も直して、題名と分かる形で残す)。打ち間違いらしい所は直し、直した所を最後に一覧にしてください。" + (list.length > 1 ? "メモの区切りはそのまま残してください。" : "") + "\n\n" + (list.length > 1 ? list.map((m, i) => "【" + (i + 1) + "】" + m).join("\n\n") : list.join(""));
 async function share(text){ if (!text) { toast("共有するメモがない"); return; } if (navigator.share) { try { await navigator.share({ text }); return; } catch (e) { if (e && e.name === "AbortError") return; } } copy(text); }
@@ -334,7 +369,8 @@ function mini(code){ const p = code.split("").map(z => PT[z]), off = p.map((q, i
     (p.length > 1 ? '<polyline points="' + off.map(q => q.join(",")).join(" ") + '" fill="none" stroke="#7fa7e8" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>' : "") + '<circle cx="' + p[0][0] + '" cy="' + p[0][1] + '" r="3.2" fill="#e9e6df"/></svg>'; }
 const chip = c => '<span class="rchip' + (USER[c] != null ? " mine" : "") + '" title="' + nameOf(c) + '">' + mini(c) + "<span>" + esc(shown(meaning(c))) + "<small>" + nameOf(c) + "</small></span></span>";
 function renderShape(){ document.querySelectorAll("#fmtsel [data-fmt]").forEach(b => b.setAttribute("aria-pressed", String(b.dataset.fmt === (OPT.fmt || "hitofude"))));
-  if (OPT.fmt === "tataku") { $("rules").innerHTML = tkRulesHtml(); const mine = Object.keys(USER); $("reglist").innerHTML = '<div>登録は、今は一筆書きのときだけ使える。</div>'; return; }
+  if (OPT.fmt === "tataku") { $("rules").innerHTML = tkRulesHtml(); $("reglist").innerHTML = tkWordsHtml(); tkWordsWire(); document.querySelector("#v-shape .row").classList.add("hide"); $("regmsg").classList.add("hide"); return; }
+  document.querySelector("#v-shape .row").classList.remove("hide"); $("regmsg").classList.remove("hide"); $("reglist").onclick = null;
   const cs = codesByCost(), diag = c => { for (let i = 1; i < c.length; i++) if (+c[i - 1] + +c[i] === 5) return true; return false; }, back = c => c.length === 3 && c[0] === c[2];
   const grp = f => '<div class="rgrid">' + cs.filter(f).filter(c => !SPECIAL[c] && meaning(c) != null).map(chip).join("") + "</div>";
   const mine = Object.keys(USER).filter(k => !BUILTIN[k] || USER[k] !== BUILTIN[k]);
