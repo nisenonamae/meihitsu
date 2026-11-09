@@ -164,9 +164,9 @@ function showWrite(){ const prev = todays().slice(-6);
     '<div class="ent cur"><i>' + (todays().length + 1) + '</i><span class="et">' + (draft ? memoHtml(draft) : '<span class="ph">' + (regMode ? "登録する形をなぞる" : "ここに書く(1行目は題名)") + "</span>") + "</span></div>";
   $("out").scrollTop = 1e9; $("state").textContent = regMode ? "形をなぞる" : (draft.slice(-1) === "\n" ? "↵" : draft.slice(-1)) || ""; }
 function log(s, ng){ if (!opt("log")) return; logs.unshift((ng ? '<span class="ng">' : "") + s + (ng ? "</span>" : "")); logs = logs.slice(0, 6); $("log").innerHTML = logs.join("<br>"); }
-function cut(){ if (!draft) { buzz([10, 40, 10]); log("今のメモが空なので区切らない", true); return false; } memos.push({ id: "m" + Date.now().toString(36), t: Date.now(), text: draft }); draft = ""; saveAll(); buzz([30, 60, 30]); say("次へ"); return true; }
-function backspace(){ if (draft) { const d = draft.slice(-1); draft = draft.slice(0, -1); saveAll(); buzz([10, 40, 10]); say("消した"); return "「" + shown(d) + "」を消した"; }
-  const t = todays(); if (t.length) { const m = t[t.length - 1]; memos = memos.filter(x => x !== m); draft = m.text; saveAll(); buzz([10, 40, 10]); say("前のメモに戻した"); return "区切りを取り消して、前のメモに戻した"; } return null; }
+function cut(){ if (!draft) { buzz([10, 40, 10]); log("今のメモが空なので区切らない", true); return false; } memos.push({ id: "m" + Date.now().toString(36), t: Date.now(), text: draft }); draft = ""; saveAll(); say("次へ"); return true; }
+function backspace(){ if (draft) { const d = draft.slice(-1); draft = draft.slice(0, -1); saveAll(); say("消した"); return "「" + shown(d) + "」を消した"; }
+  const t = todays(); if (t.length) { const m = t[t.length - 1]; memos = memos.filter(x => x !== m); draft = m.text; saveAll(); say("前のメモに戻した"); return "区切りを取り消して、前のメモに戻した"; } return null; }
 function stroke(code){ const nm = "<b>" + nameOf(code) + "</b>";
   if (regMode) { finishReg(code); return; }
   const m = meaning(code);
@@ -174,8 +174,8 @@ function stroke(code){ const nm = "<b>" + nameOf(code) + "</b>";
   else if (m === "消す") { const r = backspace(); r ? log(nm + " → " + r) : log(nm + " → 消すものがない", true); }
   else if (m === "区切り") { if (cut()) log(nm + " → 区切った"); }
   else if (m === "゛") { const last = draft.slice(-1), seq = CYCLE.find(c => c.includes(last));
-    if (!last || !seq) { buzz([10, 40, 10]); log(nm + " → 変えられる字がない", true); } else { const nx = seq[(seq.indexOf(last) + 1) % seq.length]; draft = draft.slice(0, -1) + nx; saveAll(); buzz(8); say(nx); log(nm + " → 「" + last + "」を「" + nx + "」に"); } }
-  else { draft += m; saveAll(); buzz(8); say(shown(m)); log(nm + " → 「" + shown(m) + "」" + (USER[code] != null ? "(登録)" : "")); }
+    if (!last || !seq) { buzz([10, 40, 10]); log(nm + " → 変えられる字がない", true); } else { const nx = seq[(seq.indexOf(last) + 1) % seq.length]; draft = draft.slice(0, -1) + nx; saveAll(); say(nx); log(nm + " → 「" + last + "」を「" + nx + "」に"); } }
+  else { draft += m; saveAll(); say(shown(m)); log(nm + " → 「" + shown(m) + "」" + (USER[code] != null ? "(登録)" : "")); }
   showWrite(); }
 function drawTrace(){ const r = pad.getBoundingClientRect(); $("trace").innerHTML = opt("trace") && pts.length ? '<polyline points="' + pts.map(p => (p[0] - r.left).toFixed(1) + "," + (p[1] - r.top).toFixed(1)).join(" ") + '" fill="none" stroke="rgba(255,255,255,.5)" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>' : ""; }
 pad.addEventListener("pointerdown", e => { if (cur) return; e.preventDefault(); try { pad.setPointerCapture(e.pointerId); } catch (x) {}
@@ -238,7 +238,7 @@ function startReg(){ if (!$("regtext").value) { $("regmsg").textContent = "先�
 function finishReg(code){ const t = $("regtext").value; regMode = false; const was = meaning(code);
   if (was != null && USER[code] == null && !confirm("この形(" + nameOf(code) + ")は組み込みの「" + shown(was) + "」です。「" + t + "」で上書きしますか?")) { showWrite(); return; }
   if (USER[code] != null && USER[code] !== t && !confirm("この形はもう「" + USER[code] + "」に登録しています。「" + t + "」に変えますか?")) { showWrite(); return; }
-  USER[code] = t; saveAll(); buzz(20); $("regtext").value = ""; $("regmsg").textContent = "「" + t + "」を " + nameOf(code) + " に登録しました。"; toast("登録した"); renderShape(); tab("shape"); }
+  USER[code] = t; saveAll(); $("regtext").value = ""; $("regmsg").textContent = "「" + t + "」を " + nameOf(code) + " に登録しました。"; toast("登録した"); renderShape(); tab("shape"); }
 const PT = { 1: [8, 8], 2: [24, 8], 3: [8, 24], 4: [24, 24] };
 function mini(code){ const p = code.split("").map(z => PT[z]), off = p.map((q, i) => p.slice(0, i).some(s => s[0] === q[0] && s[1] === q[1]) ? [q[0] + 2.5, q[1] + 2.5] : q);
   return '<svg width="32" height="32" viewBox="0 0 32 32" aria-hidden="true"><rect x="1" y="1" width="30" height="30" rx="4" fill="none" stroke="#3a3a40"/><line x1="16" y1="2" x2="16" y2="30" stroke="#2a2a2e"/><line x1="2" y1="16" x2="30" y2="16" stroke="#2a2a2e"/>' +
