@@ -98,6 +98,8 @@ body.fmt-tataku #tkhint{display:flex}
 
 .tkB{background:#3a2a48;color:#e3cff4}
 .gdt{border-collapse:collapse;font-size:12px;min-width:520px}.gdt th,.gdt td{border:1px solid var(--line);padding:4px 5px;text-align:left;vertical-align:top;color:var(--fg)}.gdt th{color:var(--sub);font-weight:400;white-space:nowrap}.gdt td small{color:var(--sub);font-size:11px}
+
+.gd-only{display:none!important}body.fmt-gyodan .gd-only{display:flex!important}
 </style>
 </head>
 <body>
@@ -122,7 +124,7 @@ body.fmt-tataku #tkhint{display:flex}
   <h3>目を閉じるとき</h3>
   <div class="opts"><label><input type="checkbox" id="o-bspeak"> 読み上げる</label><label><input type="checkbox" id="o-btext"> 上に文を出す</label></div>
   <div style="margin-top:2px">切っておくと、目を閉じるモードでは震えだけで知らせる。</div>
-  <div class="opts" style="margin-top:6px"><label>十字の太さ <input type="range" id="o-gap" min="1" max="45" value="4"></label><label>読む速さ <input type="range" id="o-rate" min="8" max="20" value="14"></label></div>
+  <div class="opts" style="margin-top:6px"><label>十字の太さ <input type="range" id="o-gap" min="1" max="45" value="4"></label><label>読む速さ <input type="range" id="o-rate" min="8" max="20" value="14"></label><label class="gd-only">長押しの境目 <input type="range" id="o-long" min="250" max="700" step="25" value="450"> <span id="o-longv">0.45秒</span></label></div>
   <h2>登録</h2>
   <div class="row"><input type="text" id="regtext" placeholder="登録する言葉(例:という)"><button id="regdraw">形をなぞる</button></div>
   <div id="regmsg">言葉を書いて「形をなぞる」を押すと、書く画面に移るので、パッドで形をなぞる。3回以上移る形なら、組み込みの字とかぶらない。</div>
@@ -311,7 +313,7 @@ const TK = (() => {
     F[s] = f; keepAwake();
     if (OPT.fmt === "gyodan") f.ltimer = setTimeout(() => { if (F[s] !== f || f.mod) return; const p = F[s === "L" ? "R" : "L"];
       if (f.chord && p && p.chord) { if (!p.long) { f.long = p.long = true; buzz([12, 50, 12]); } return; }
-      if (!f.chord && !(p && p.t0 < f.t0)) { f.long = true; buzz([12, 50, 12]); } }, GD_LONG); }
+      if (!f.chord && !(p && p.t0 < f.t0)) { f.long = true; buzz([12, 50, 12]); } }, OPT.glong || GD_LONG); }
   function up(e, cancel){ const s = F.L && F.L.id === e.pointerId ? "L" : F.R && F.R.id === e.pointerId ? "R" : null; if (!s) return;
     const f = F[s], os = s === "L" ? "R" : "L", o = F[os]; F[s] = null; lastRel[s] = { t0: f.t0, tUp: performance.now() }; if (cancel) return;
     // 2本いっしょに触れた:2本とも続けて離れたら「いっしょのトン」、片方が残ったら、残った指は置いた指(もう片方は ' 付きのトン)
@@ -334,7 +336,7 @@ const TK = (() => {
   function stopPractice(){ if (!practice) return; toast("練習を終えた(" + practice.ok + "/" + practice.n + ")"); practice = null; $("practice").classList.remove("on"); show(); }
   return { down, up, show, startPractice, stopPractice, isPracticing: () => !!practice, reset: () => { seq = ""; alts = []; F = { L: null, R: null }; show(); }, state: () => ({ seq, cl, cr }) }; })();
 $("practice").onclick = () => TK.isPracticing() ? TK.stopPractice() : TK.startPractice();
-function setFmt(f){ OPT.fmt = f; saveAll(); document.body.classList.toggle("fmt-tataku", f === "tataku" || f === "gyodan"); document.querySelectorAll("#fmtsel [data-fmt]").forEach(b => b.setAttribute("aria-pressed", String(b.dataset.fmt === f))); TK.reset(); if (!$("v-shape").classList.contains("hide")) renderShape(); }
+function setFmt(f){ OPT.fmt = f; saveAll(); document.body.classList.toggle("fmt-tataku", f === "tataku" || f === "gyodan"); document.body.classList.toggle("fmt-gyodan", f === "gyodan"); document.querySelectorAll("#fmtsel [data-fmt]").forEach(b => b.setAttribute("aria-pressed", String(b.dataset.fmt === f))); TK.reset(); if (!$("v-shape").classList.contains("hide")) renderShape(); }
 $("fmtsel").addEventListener("click", e => { const b = e.target.closest("[data-fmt]"); if (b) setFmt(b.dataset.fmt); });
 /* 自分の文から言葉の候補を作る:2〜5字の並びを数え、1字ずつ打つより短くなる分が大きいものを選ぶ */
 function tkCandidates(){ const text = memos.map(m => m.text).concat([draft]).join("\n"), cnt = new Map();
@@ -365,7 +367,7 @@ function gdRulesHtml(){ const chip = c => '<span class="tkcode">' + c.split("").
     "<li><b>段</b>:あ=左・い=右・う=左'・え=右'・お=両</li>" +
     "<li>例:「き」は、か行(左右)+い段(右)で <b>左右右</b>。「の」は、な行(左両)+お段(両)で <b>左両両</b></li>" +
     "<li><b>両のまとまり</b>は、よく出る言葉(2回で打てる)。<b>右'両</b>+1回=もう5つの言葉</li>" +
-    "<li><b>長押し</b>(押し続けて「コッコッ」と震えたら離す):<b>左=1字消す</b>(打ちかけの途中なら、打ちかけを取り消す)・<b>右=改行</b>・<b>両=区切り</b>(次のメモへ)</li>" +
+    "<li><b>長押し</b>(押し続けて「コッコッ」と震えたら離す。震えるまでの長さは、上の設定の「長押しの境目」で変えられる):<b>左=1字消す</b>(打ちかけの途中なら、打ちかけを取り消す)・<b>右=改行</b>・<b>両=区切り</b>(次のメモへ)</li>" +
     "<li><b>字が決まると「コッ」と震える</b>。3回ごとに決まるので、リズムで区切りが分かる</li>" +
     "<li>手のひらのような大きな触れ方、画面の縁からの触れ方、3本目の指は数えない</li></ol>" +
     "<h2>行の表(1回目×2回目)</h2><div style=\"overflow-x:auto\"><table class=\"gdt\"><tr><th></th>" + GD_ORDER.map(x => "<th>2回目 " + chip(x) + "</th>").join("") + "</tr>" +
@@ -467,6 +469,8 @@ $("regimp").onclick = () => { const s = prompt("書き出した登録を貼っ�
 $("o-bspeak").checked = OPT.bspeak === true; $("o-bspeak").onchange = () => { OPT.bspeak = $("o-bspeak").checked; saveAll(); };
 $("o-btext").checked = OPT.btext === true; $("o-btext").onchange = () => { OPT.btext = $("o-btext").checked; saveAll(); document.body.classList.toggle("btext", OPT.btext); };
 [["o-speak", "speak"], ["o-vib", "vib"], ["o-trace", "trace"], ["o-log", "log"]].forEach(([id, k]) => { $(id).checked = opt(k); $(id).onchange = () => { OPT[k] = $(id).checked; saveAll(); if (k === "log") $("log").innerHTML = ""; }; });
+$("o-long").value = OPT.glong || 450; $("o-longv").textContent = ((OPT.glong || 450) / 1000).toFixed(2) + "秒";
+$("o-long").oninput = () => { OPT.glong = +$("o-long").value; $("o-longv").textContent = (OPT.glong / 1000).toFixed(2) + "秒"; saveAll(); };
 $("o-gap").value = OPT.gap || 4; $("o-gap").oninput = () => { OPT.gap = +$("o-gap").value; saveAll(); layout(); };
 $("o-rate").value = OPT.rate || 14; $("o-rate").onchange = () => { OPT.rate = +$("o-rate").value; saveAll(); say("このくらいの速さ"); };
 /* 画面の切り替え */
