@@ -93,6 +93,8 @@ body.fmt-tataku #pad{background:#121216}
 body.fmt-tataku #tkhint{display:flex}
 .tk-only{display:none}body.fmt-tataku .tk-only{display:inline-block}
 #practice.on{border-color:var(--acc);color:var(--acc)}
+
+.tkl{background:#1c3150;color:#bcd0f4;box-shadow:inset 0 -3px 0 #8fb0e8}.tkr{background:#4a3516;color:#f4d9b0;box-shadow:inset 0 -3px 0 #e8c48f}
 </style>
 </head>
 <body>
@@ -103,7 +105,7 @@ body.fmt-tataku #tkhint{display:flex}
   <div class="tools"><button id="blindbtn" class="pri">目を閉じる</button><button id="bs" title="長押しで書きかけを全部消す">1字消す<small>長押しで全部</small></button><button id="bsr" title="押している間、続けて消す">続けて消す<small>押してる間</small></button><button id="cut">区切る</button><button id="sharecur">共有</button><button id="practice" class="tk-only">練習</button></div>
   <div id="pad"><div class="zone" id="z1"></div><div class="zone" id="z2"></div><div class="zone" id="z3"></div><div class="zone" id="z4"></div>
     <div class="core" id="c1"></div><div class="core" id="c2"></div><div class="core" id="c3"></div><div class="core" id="c4"></div>
-    <svg id="trace"></svg><div id="tkhint"><div id="tkseq"></div><div id="tkmsg">どこでも、左右2本の指で叩く</div></div><div id="center"><div id="state"></div></div><div id="log"></div></div>
+    <svg id="trace"></svg><div id="tkhint"><div id="tkseq"></div><div id="tkmsg">どこでも、左右2本の指で叩く(置いたまま叩くと ' 付き)</div></div><div id="center"><div id="state"></div></div><div id="log"></div></div>
 </section>
 <button id="exitblind" aria-label="目を閉じるのをやめる">×</button>
 
@@ -111,7 +113,7 @@ body.fmt-tataku #tkhint{display:flex}
 
 <section class="view hide" id="v-shape"><div id="shape">
   <h2>打ち方</h2>
-  <div class="fmtsel" id="fmtsel"><button data-fmt="hitofude">一筆書き<small>4つの場所をなぞる</small></button><button data-fmt="tataku">2本指で叩く<small>3種類のトン</small></button></div>
+  <div class="fmtsel" id="fmtsel"><button data-fmt="hitofude">一筆書き<small>4つの場所をなぞる</small></button><button data-fmt="tataku">置いて叩く<small>2本指・トンだけ</small></button></div>
   <h2>設定</h2>
   <div class="opts"><label><input type="checkbox" id="o-speak" checked> 読み上げ</label><label><input type="checkbox" id="o-vib" checked> 震え</label><label><input type="checkbox" id="o-trace" checked> 線</label><label><input type="checkbox" id="o-log" checked> 判定</label></div>
   <h3>目を閉じるとき</h3>
@@ -225,83 +227,75 @@ $("blindbtn").onclick = () => setBlind(true); $("exitblind").onclick = () => set
 async function keepAwake(){ try { if (!wakeLock && navigator.wakeLock && document.visibilityState === "visible") { wakeLock = await navigator.wakeLock.request("screen"); wakeLock.addEventListener("release", () => { wakeLock = null; }); } } catch (e) {} }
 document.addEventListener("visibilitychange", () => { if (document.visibilityState === "visible" && !$("v-write").classList.contains("hide")) keepAwake(); });
 
-/* ───── 打ち方2:2本指で叩く ─────
-   叩き方は3種類(左の指トン=L・右の指トン=R・2本いっしょにトン=B)。よく出る字ほど短い並びにし、どの字の並びもほかの字の頭にならない。
-   長押しは操作だけ:左=1字消す(打ちかけ中は打ちかけを取り消す)、右=改行、2本=区切り。字が1つ決まると「コッ」と震える */
-const TK_SYM = { L: "左", R: "右", B: "両" };
-const TK_FREQ = ["い", "う", "ん", "の", "し", "か", "て", "と", "た", "に", "な", "る", "は", "、", "が", "で", "こ", "き", "゛", "。", "っ", "ま", "も", "れ", "り", "く", "す", "よ", "お", "あ", "さ", "け", "ー", "ち", "つ", "そ", "め", "せ", "ょ", "わ", "え", "ひ", "み", "ろ", "じ", "だ", "ど", "ほ", "ふ", "や", "ね", "ゃ", "ゅ", "ゆ", "ば", "び", "ぶ", "べ", "ぼ", "ぱ", "ぴ", "ぷ", "ぺ", "ぽ", "ご", "ぎ", "ぐ", "げ", "ざ", "ず", "ぜ", "ぞ", "ぢ", "づ", "ぬ", "へ", "む", "を", "？", "！", "　", "ぁ", "ぃ", "ぅ", "ぇ", "ぉ", "ゎ"];
-const TK_CODE = (() => { // 3つに分かれる木(ハフマン)で、出やすさから長さを決め、短い順に「左 → 右 → 両」の順で並べる
-  const n0 = TK_FREQ.length; let items = TK_FREQ.map((ch, i) => ({ ch, w: 1 / Math.pow(i + 2, 1.05) }));
-  while ((items.length - 1) % 2) items.push({ ch: null, w: 0 });
-  let nodes = items.map(x => ({ w: x.w, leaf: x }));
-  while (nodes.length > 1) { nodes.sort((a, b) => a.w - b.w); const kids = nodes.splice(0, 3); nodes.push({ w: kids.reduce((s, k) => s + k.w, 0), kids }); }
-  const len = new Map(); (function walk(nd, d){ if (nd.leaf) len.set(nd.leaf, d); else nd.kids.forEach(k => walk(k, d + 1)); })(nodes[0], 0);
-  const order = items.slice().sort((a, b) => len.get(a) - len.get(b) || (a.ch == null) - (b.ch == null) || TK_FREQ.indexOf(a.ch) - TK_FREQ.indexOf(b.ch));
-  const map = {}, dec = {}; let code = 0, prev = len.get(order[0]);
-  order.forEach((it, i) => { const l = len.get(it); if (i) { code++; code *= Math.pow(3, l - prev); } prev = l;
-    let s = "", c = code; for (let k = 0; k < l; k++) { s = "LRB"[c % 3] + s; c = Math.floor(c / 3); }
-    if (it.ch != null) { map[it.ch] = s; dec[s] = it.ch; } });
-  return { map, dec, avg: TK_FREQ.reduce((a, ch, i) => a + map[ch].length / Math.pow(i + 2, 1.05), 0) / TK_FREQ.reduce((a, ch, i) => a + 1 / Math.pow(i + 2, 1.05), 0) }; })();
+/* ───── 打ち方2:置いて叩く(2本指・トンだけ) ─────
+   左のトン=左、右のトン=右。片方の指を置いたまま、もう片方でトン=「'」付き(左'・右')。この4種類の並びで1字。
+   「'」になるのは、置いた指がトンを丸ごと包んでいたとき(先に触れて、後に離れた)だけ。速く叩いて指が重なっただけなら、ふつうのトン。
+   2本いっしょのトン=打ちかけの取り消し(打ちかけがなければ1字消す)。字が決まると「コッ」と震える。並びは計算で決めたもので、変えない */
+const TK_TABLE = {"い": "LR", "う": "LL", "し": "Ll", "ん": "Lr", "の": "rR", "か": "rr", "て": "rl", "が": "rLL", "と": "rLR", "。": "rLr", "れ": "rLl", "に": "lLR", "っ": "lLr", "も": "lLl", "る": "lLL", "゛": "lRl", "た": "lRL", "ま": "lRr", "で": "lRR", "は": "llL", "、": "llR", "き": "lll", "さ": "llr", "お": "lrR", "\n": "lrr", "ゃ": "lrl", "よ": "lrL", "な": "RLl", "こ": "RLRL", "す": "RLRR", "け": "RLRr", "あ": "RLRl", "せ": "RLLL", "り": "RLLR", "ふ": "RLLl", "ひ": "RLLr", "ー": "RLrR", "そ": "RLrL", "区切り": "RLrr", "ぎ": "RLrl", "ち": "RRLL", "え": "RRLr", "ね": "RRLl", "く": "RRLR", "つ": "RRRL", "ほ": "RRRR", "ぷ": "RRRl", "ざ": "RRRr", "や": "RRlL", "　": "RRlr", "じ": "RRlR", "ぼ": "RRll", "ば": "RRrR", "ぽ": "RRrr", "ぅ": "RRrl", "ゅ": "RRrL", "ご": "RrLr", "ょ": "RrLR", "ぶ": "RrLL", "ぞ": "RrLl", "わ": "RrRL", "ゆ": "RrRR", "ぜ": "RrRl", "ぢ": "RrRr", "び": "RrrL", "べ": "RrrR", "ぃ": "Rrrl", "ず": "Rrrr", "む": "RrlL", "を": "RrlR", "ぁ": "Rrll", "ゎ": "Rrlr", "み": "RllL", "ど": "RllR", "？": "Rllr", "ぺ": "Rlll", "！": "Rlrr", "ぬ": "RlrL", "ぉ": "Rlrl", "づ": "RlrR", "め": "RlLR", "ろ": "RlLL", "げ": "RlLl", "ぱ": "RlLr", "だ": "RlRR", "ぴ": "RlRl", "ぐ": "RlRr", "へ": "RlRLR", "ぇ": "RlRLL"};
+const TK_SYM = { L: "左", R: "右", l: "左'", r: "右'" };
+const TK_FREQ = Object.keys(TK_TABLE);
+const TK_CODE = { map: TK_TABLE, dec: Object.fromEntries(Object.entries(TK_TABLE).map(([k, v]) => [v, k])),
+  avg: (() => { const ks = TK_FREQ, wsum = ks.reduce((a, k, i) => a + 1 / Math.pow(i + 2, 1.05), 0); return ks.reduce((a, k, i) => a + TK_TABLE[k].length / Math.pow(i + 2, 1.05), 0) / wsum; })() };
+const tkJ = c => c.split("").map(x => TK_SYM[x]).join("");
 const TK = (() => {
-  let seq = "", groups = [], ptr = new Map(), cl = null, cr = null, taps = [], chordGaps = [], practice = null;
-  const longTh = () => { if (taps.length < 8) return 380; const a = taps.slice().sort((x, y) => x - y), med = a[Math.floor(a.length / 2)]; return Math.max(260, Math.min(650, med * 2.4)); };
-  const chordWin = () => { if (chordGaps.length < 6) return 70; const a = chordGaps.slice().sort((x, y) => x - y); return Math.max(45, Math.min(110, a[Math.floor(a.length * 0.9)] * 1.5)); };
+  let seq = "", F = { L: null, R: null }, cl = null, cr = null, practice = null;
+  const CHORD = 35;   // 2本がこれより近くに触れ始めたら「いっしょ」の候補
   const bad = e => { const r = pad.getBoundingClientRect(), m = 10, big = (e.width || 0) > 46 || (e.height || 0) > 46; return big || e.clientX - r.left < m || r.right - e.clientX < m || e.clientY - r.top < m || r.bottom - e.clientY < m; };
-  function sideOf(x){ const r = pad.getBoundingClientRect(); if (cl == null) { cl = r.left + r.width * 0.38; cr = r.left + r.width * 0.62; }
-    const s = Math.abs(x - cl) <= Math.abs(x - cr) ? "L" : "R"; if (s === "L") cl = cl * 0.8 + x * 0.2; else cr = cr * 0.8 + x * 0.2;
-    if (cr - cl < 30) { const m = (cl + cr) / 2; cl = m - 15; cr = m + 15; } return s; }
+  function sideFor(x){ const r = pad.getBoundingClientRect(); if (cl == null) { cl = r.left + r.width * 0.38; cr = r.left + r.width * 0.62; }
+    if (F.L && !F.R) return x > F.L.x ? "R" : null; if (F.R && !F.L) return x < F.R.x ? "L" : null;
+    return Math.abs(x - cl) <= Math.abs(x - cr) ? "L" : "R"; }
+  function learn(s, x){ if (s === "L") cl = cl * 0.8 + x * 0.2; else cr = cr * 0.8 + x * 0.2; if (cr - cl < 30) { const m = (cl + cr) / 2; cl = m - 15; cr = m + 15; } }
   function show(){ const el = $("tkseq"); if (el) el.innerHTML = seq ? seq.split("").map(c => '<i class="tk' + c + '">' + TK_SYM[c] + "</i>").join("") : "";
-    if (practice) $("tkmsg").textContent = "練習:「" + shown(practice.target) + "」を打つ"; else $("tkmsg").textContent = "どこでも、左右2本の指で叩く"; }
+    $("tkmsg").textContent = practice ? "練習:「" + shown(practice.target) + "」を打つ" : "どこでも、左右2本の指で叩く(置いたまま叩くと ' 付き)"; }
   function commit(ch){ buzz(25);
-    if (practice) { const ok = ch === practice.target; log((ok ? "○ " : "× ") + "「" + shown(ch) + "」" + (ok ? "" : "(正しくは「" + shown(practice.target) + "」=" + TK_CODE.map[practice.target].split("").map(c => TK_SYM[c]).join("") + ")"), !ok);
-      if (ok) { practice.ok++; } practice.n++; say(ok ? "まる" : "ちがう"); setTimeout(nextPractice, 450); return; }
+    if (practice) { const ok = ch === practice.target; log((ok ? "○ " : "× ") + "「" + shown(ch) + "」" + (ok ? "" : "(正しくは「" + shown(practice.target) + "」=" + tkJ(TK_TABLE[practice.target]) + ")"), !ok);
+      if (ok) practice.ok++; practice.n++; say(ok ? "まる" : "ちがう"); setTimeout(nextPractice, 450); return; }
+    if (ch === "区切り") { if (cut()) log("区切った"); showWrite(); return; }
     if (ch === "゛") { const last = draft.slice(-1), sq = CYCLE.find(c => c.includes(last)); if (!last || !sq) { buzz([10, 40, 10]); log("変えられる字がない", true); return; } const nx = sq[(sq.indexOf(last) + 1) % sq.length]; draft = draft.slice(0, -1) + nx; saveAll(); say(nx); log("「" + last + "」を「" + nx + "」に"); showWrite(); return; }
-    draft += ch; saveAll(); say(shown(ch)); log("<b>" + TK_CODE.map[ch].split("").map(c => TK_SYM[c]).join("") + "</b> → 「" + shown(ch) + "」"); showWrite(); }
+    draft += ch; saveAll(); say(shown(ch)); log("<b>" + tkJ(TK_TABLE[ch]) + "</b> → 「" + shown(ch) + "」"); showWrite(); }
   function push(sym){ seq += sym; const ch = TK_CODE.dec[seq];
     if (ch != null) { seq = ""; commit(ch); }
-    else if (!Object.keys(TK_CODE.dec).some(k => k.startsWith(seq))) { buzz([10, 40, 10]); log("<b>" + seq.split("").map(c => TK_SYM[c]).join("") + "</b> → その並びの字はない", true); seq = ""; }
+    else if (!Object.keys(TK_CODE.dec).some(k => k.startsWith(seq))) { buzz([10, 40, 10]); log("<b>" + tkJ(seq) + "</b> → その並びの字はない", true); seq = ""; }
     show(); }
-  function command(sym){ if (seq) { seq = ""; buzz([10, 40, 10]); log("打ちかけを取り消した"); show(); return; }
-    if (practice && sym === "B") { stopPractice(); return; }
-    if (sym === "L") { const r = backspace(); r ? log("1字消す → " + r) : (buzz([10, 40, 10]), log("消すものがない", true)); }
-    else if (sym === "R") { draft += "\n"; saveAll(); say("改行"); log("改行"); }
-    else if (sym === "B") { if (cut()) log("区切った"); }
+  function chordCmd(){ if (seq) { seq = ""; buzz([10, 40, 10]); log("打ちかけを取り消した"); }
+    else if (practice) { stopPractice(); return; }
+    else { const r = backspace(); r ? log("2本いっしょ → " + r) : (buzz([10, 40, 10]), log("消すものがない", true)); }
     showWrite(); show(); }
-  function flush(){ while (groups.length && groups[0].done) { const g = groups.shift(); if (g.long) command(g.sym); else push(g.sym); } }
-  function down(e){ e.preventDefault(); if (bad(e)) return; try { pad.setPointerCapture(e.pointerId); } catch (x) {}
-    const now = performance.now(), open = groups.filter(g => !g.done && g.ptrs.size > 0);
-    if (open.length >= 2 || ptr.size >= 2) return;
-    const g0 = open.find(g => g.ptrs.size === 1 && !g.chord && now - g.t0 < chordWin());
-    if (g0) { g0.ptrs.add(e.pointerId); g0.chord = true; g0.xs.push(e.clientX); chordGaps.push(now - g0.t0); if (chordGaps.length > 40) chordGaps.shift(); ptr.set(e.pointerId, g0); return; }
-    const g = { t0: now, ptrs: new Set([e.pointerId]), xs: [e.clientX], chord: false, done: false, long: false };
-    g.timer = setTimeout(() => { if (!g.done) { g.long = true; buzz([12, 50, 12]); } }, longTh());
-    groups.push(g); ptr.set(e.pointerId, g); keepAwake(); }
-  function up(e, cancel){ const g = ptr.get(e.pointerId); if (!g) return; ptr.delete(e.pointerId); g.ptrs.delete(e.pointerId); if (g.ptrs.size) return;
-    clearTimeout(g.timer); const dur = performance.now() - g.t0; g.done = true;
-    if (cancel) { groups = groups.filter(x => x !== g); return; }
-    g.long = dur >= longTh(); if (!g.long) { taps.push(dur); if (taps.length > 40) taps.shift(); }
-    if (g.chord) { const a = Math.min(...g.xs), b = Math.max(...g.xs); if (cl != null) { cl = cl * 0.7 + a * 0.3; cr = cr * 0.7 + b * 0.3; } g.sym = "B"; } else g.sym = sideOf(g.xs[0]);
-    flush(); }
-  function nextPractice(){ if (!practice) return; const pool = TK_FREQ.slice(0, Math.min(TK_FREQ.length, practice.level)); practice.target = pool[Math.floor(Math.random() * pool.length)];
+  function down(e){ e.preventDefault(); if (bad(e) || (F.L && F.R)) return; const s = sideFor(e.clientX); if (!s || F[s]) return;
+    try { pad.setPointerCapture(e.pointerId); } catch (x) {}
+    const now = performance.now(), o = F[s === "L" ? "R" : "L"];
+    const f = { id: e.pointerId, x: e.clientX, t0: now, enc: !!o, mod: false, chord: false };
+    if (o && !o.mod && !o.enc && !o.chord && now - o.t0 < CHORD) { f.chord = o.chord = true; }
+    F[s] = f; keepAwake(); }
+  function up(e, cancel){ const s = F.L && F.L.id === e.pointerId ? "L" : F.R && F.R.id === e.pointerId ? "R" : null; if (!s) return;
+    const f = F[s], os = s === "L" ? "R" : "L", o = F[os]; F[s] = null; if (cancel) return;
+    // 2本いっしょに触れた:2本とも続けて離れたら「いっしょのトン」、片方が残ったら、残った指は置いた指(もう片方は ' 付きのトン)
+    if (f.chord && f.pairUp) { clearTimeout(f.pairUp.timer); chordCmd(); return; }
+    if (f.chord && o && o.chord) { o.pairUp = { timer: setTimeout(() => { o.pairUp = null; o.chord = false; f.chord = false; single(s, f, os, F[os] === o ? o : null); }, 90) }; return; }
+    single(s, f, os, o); }
+  function single(s, f, os, o){ if (f.mod) return;   // 置いていた指:何も打たない
+    const shifted = !!(o && F[os] === o && o.t0 <= f.t0 && (f.enc || o.chord === false)); if (shifted) o.mod = true;
+    learn(s, f.x); push(shifted ? s.toLowerCase() : s); }
+  function nextPractice(){ if (!practice) return; const pool = TK_FREQ.filter(k => k !== "区切り" && k !== "\n" && k !== "゛").slice(0, practice.level); practice.target = pool[Math.floor(Math.random() * pool.length)];
     const b = document.body.classList.contains("blind"), was = OPT.bspeak; if (b) OPT.bspeak = true; say(shown(practice.target)); if (b) OPT.bspeak = was; show(); }
-  function startPractice(){ practice = { level: 12, n: 0, ok: 0 }; toast("練習:読み上げた字を打つ(2本の長押しで終わる)"); nextPractice(); $("practice").classList.add("on"); }
+  function startPractice(){ practice = { level: 12, n: 0, ok: 0 }; toast("練習:読み上げた字を打つ(2本いっしょのトンで終わる)"); nextPractice(); $("practice").classList.add("on"); }
   function stopPractice(){ if (!practice) return; toast("練習を終えた(" + practice.ok + "/" + practice.n + ")"); practice = null; $("practice").classList.remove("on"); show(); }
-  return { down, up, show, startPractice, stopPractice, isPracticing: () => !!practice, reset: () => { seq = ""; groups = []; ptr.clear(); show(); }, state: () => ({ seq, cl, cr, longTh: longTh(), chordWin: chordWin() }) }; })();
+  return { down, up, show, startPractice, stopPractice, isPracticing: () => !!practice, reset: () => { seq = ""; F = { L: null, R: null }; show(); }, state: () => ({ seq, cl, cr }) }; })();
 $("practice").onclick = () => TK.isPracticing() ? TK.stopPractice() : TK.startPractice();
 function setFmt(f){ OPT.fmt = f; saveAll(); document.body.classList.toggle("fmt-tataku", f === "tataku"); document.querySelectorAll("#fmtsel [data-fmt]").forEach(b => b.setAttribute("aria-pressed", String(b.dataset.fmt === f))); TK.reset(); if (!$("v-shape").classList.contains("hide")) renderShape(); }
 $("fmtsel").addEventListener("click", e => { const b = e.target.closest("[data-fmt]"); if (b) setFmt(b.dataset.fmt); });
-function tkRulesHtml(){ const by = {}; TK_FREQ.forEach(ch => { const c = TK_CODE.map[ch]; (by[c.length] = by[c.length] || []).push(ch); });
-  const dots = c => '<span class="tkcode">' + c.split("").map(x => '<i class="tk' + x + '">' + TK_SYM[x] + "</i>").join("") + "</span>";
-  return "<h2>法則(2本指で叩く)</h2><ol>" +
-    "<li>画面の<b>どこでもいい</b>。左右2本の指(人差し指と中指など)で叩く。どちらの指かは、2本のいつもの位置をアプリが覚えて決める</li>" +
-    "<li>叩き方は3種類:<b>左のトン</b>・<b>右のトン</b>・<b>2本いっしょのトン</b>。この並びで1字になる</li>" +
+function tkRulesHtml(){ const by = {}; TK_FREQ.forEach(ch => { const c = TK_TABLE[ch]; (by[c.length] = by[c.length] || []).push(ch); });
+  const chips = c => '<span class="tkcode">' + c.split("").map(x => '<i class="tk' + x + '">' + TK_SYM[x] + "</i>").join("") + "</span>";
+  return "<h2>法則(置いて叩く)</h2><ol>" +
+    "<li>画面の<b>どこでもいい</b>。左右2本の指(人差し指と中指)で叩く。どちらの指かは、2本の並び(左にある方が左)で決める</li>" +
+    "<li>叩き方は4種類:<b>左</b>(左の指でトン)・<b>右</b>(右の指でトン)・<b>左'</b>(右の指を置いたまま、左でトン)・<b>右'</b>(左の指を置いたまま、右でトン)。この並びで1字になる</li>" +
+    "<li>置いていた指を離しても、その間にもう片方が叩いていれば<b>何も打たない</b>。「'」になるのは、置いた指が<b>先に触れて、後に離れた</b>ときだけ。速く叩いて指が少し重なっただけなら、ふつうのトン</li>" +
     "<li><b>字が決まると「コッ」と震える</b>。それが字と字の区切り。途中で手が止まっても、打ちかけは消えない</li>" +
-    "<li><b>よく出る字ほど短い並び</b>。どの字の並びも、ほかの字の頭にはならない</li>" +
-    "<li>長押しは操作だけ。押し続けて<b>「コッコッ」と2回震えたら離す</b>:<b>左=1字消す</b>(打ちかけ中なら打ちかけを取り消す)、<b>右=改行</b>、<b>2本=区切り</b>(次のメモへ)</li>" +
-    "<li>手のひらのような大きな触れ方、画面の縁からの触れ方、3本目の指は数えない</li>" +
-    "<li>長押しの境目と、「いっしょ」と見る幅は、あなたの叩き方に合わせて少しずつ動く(今は 長押し " + Math.round(TK.state().longTh) + "ミリ秒・いっしょ " + Math.round(TK.state().chordWin) + "ミリ秒)</li></ol>" +
-    "<div>平均すると1字に約" + TK_CODE.avg.toFixed(1) + "回叩く。まずは「練習」で、よく出る12字から体に入れる。</div>" +
-    "<h2>字と並び(短い順)</h2>" + Object.keys(by).sort((a, b) => a - b).map(l => "<h3>" + l + "回</h3>" + '<div class="rgrid">' + by[l].map(ch => '<span class="rchip"><span>' + esc(shown(ch)) + "<small>" + dots(TK_CODE.map[ch]) + "</small></span></span>").join("") + "</div>").join(""); }
+    "<li><b>2本いっしょにトン</b>=打ちかけの取り消し(打ちかけがなければ1字消す)。改行・区切り・゛゜小は、下の並びにある</li>" +
+    "<li>並びは、よく出る字ほど速く打てるように計算で決めたもの(平均で1字に約" + TK_CODE.avg.toFixed(1) + "回)。変わらないので、体で覚えてよい</li>" +
+    "<li>手のひらのような大きな触れ方、画面の縁からの触れ方、3本目の指は数えない</li></ol>" +
+    "<div>まずは「練習」で、よく出る12字から体に入れる。</div>" +
+    "<h2>字と並び(短い順)</h2>" + Object.keys(by).sort((a, b) => a - b).map(l => "<h3>" + l + "回</h3>" + '<div class="rgrid">' + by[l].map(ch => '<span class="rchip"><span>' + esc(ch === "区切り" ? "区切り(次へ)" : shown(ch)) + "<small>" + chips(TK_TABLE[ch]) + "</small></span></span>").join("") + "</div>").join(""); }
 /* ───── 共有・コピー ───── */
 const AI = list => "次の" + (list.length > 1 ? list.length + "つのメモ(【】で区切ってある)を、それぞれ" : "ひらがなの文を、") + "意味が通る自然な漢字かな混じりの文に直してください。改行があるメモは、1行目が題名です(題名も直して、題名と分かる形で残す)。打ち間違いらしい所は直し、直した所を最後に一覧にしてください。" + (list.length > 1 ? "メモの区切りはそのまま残してください。" : "") + "\n\n" + (list.length > 1 ? list.map((m, i) => "【" + (i + 1) + "】" + m).join("\n\n") : list.join(""));
 async function share(text){ if (!text) { toast("共有するメモがない"); return; } if (navigator.share) { try { await navigator.share({ text }); return; } catch (e) { if (e && e.name === "AbortError") return; } } copy(text); }
