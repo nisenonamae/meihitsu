@@ -358,7 +358,7 @@ function tkWordsWire(){ const box = $("reglist"); box.onclick = e => { const up 
 
 function gdRulesHtml(){ const chip = c => '<span class="tkcode">' + c.split("").map(x => '<i class="tk' + x + '">' + TK_SYM[x] + "</i>").join("") + "</span>";
   const rowCell = (g, i) => { const row = GD_GROUPS[g][i]; if (g === "B") return "<td><b>" + esc(GD_WORDS[i] || "(空き)") + "</b></td>"; const cs = gdChars(row);
-    return "<td><b>" + esc(GD_ROWNAME[row] || row + "行") + "</b>" + (cs ? '<small style="display:block">' + cs.map(c => c == null ? "・" : escshown(c)).join(" ") + "</small>" : "") + "</td>"; };
+    return "<td><b>" + esc(GD_ROWNAME[row] || row + "行") + "</b>" + (cs ? '<small style="display:block">' + cs.map(c => c == null ? "・" : esc(shown(c))).join(" ") + "</small>" : "") + "</td>"; };
   return "<h2>法則(行と段)</h2><ol>" +
     "<li>画面の<b>どこでもいい</b>。左右2本の指で叩く。トンは5通り:<b>左・右・左'・右'・両</b>(左'=右を置いたまま左でトン、右'=左を置いたまま右でトン、両=2本いっしょにトン)。<b>どこでもこの順番</b>を使う</li>" +
     "<li><b>どの字も3回</b>:1回目=5行のまとまり、2回目=その中の何番目の行、3回目=段</li>" +
