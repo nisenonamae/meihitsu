@@ -124,7 +124,7 @@ body.fmt-tataku #tkhint{display:flex}
   <h3>目を閉じるとき</h3>
   <div class="opts"><label><input type="checkbox" id="o-bspeak"> 読み上げる</label><label><input type="checkbox" id="o-btext"> 上に文を出す</label></div>
   <div style="margin-top:2px">切っておくと、目を閉じるモードでは震えだけで知らせる。</div>
-  <div class="opts" style="margin-top:6px"><label>十字の太さ <input type="range" id="o-gap" min="1" max="45" value="4"></label><label>読む速さ <input type="range" id="o-rate" min="8" max="20" value="14"></label><label class="gd-only">長押しの境目 <input type="range" id="o-long" min="250" max="700" step="25" value="450"> <span id="o-longv">0.45秒</span></label></div>
+  <div class="opts" style="margin-top:6px"><label>十字の太さ <input type="range" id="o-gap" min="1" max="45" value="4"></label><label>読む速さ <input type="range" id="o-rate" min="8" max="20" value="14"></label><label class="gd-only">手を止めて打ちかけを消す <input type="range" id="o-gcancel" min="0" max="5000" step="500" value="0"> <span id="o-gcancelv">しない</span></label></div>
   <h2>登録</h2>
   <div class="row"><input type="text" id="regtext" placeholder="登録する言葉(例:という)"><button id="regdraw">形をなぞる</button></div>
   <div id="regmsg">言葉を書いて「形をなぞる」を押すと、書く画面に移るので、パッドで形をなぞる。3回以上移る形なら、組み込みの字とかぶらない。</div>
@@ -238,11 +238,10 @@ document.addEventListener("visibilitychange", () => { if (document.visibilitySta
    1回目=5行のまとまり、2回目=その中の何番目の行、3回目=段(あ=左・い=右・う=左'・え=右'・お=両)。
    右'のまとまりの4番目=1字消す(2回)。両のまとまり=よく出る言葉(2回)。右'のまとまりの5番目=言葉の入口(+1回で、もう5つの言葉) */
 const GD_ORDER = ["L", "R", "l", "r", "B"], GD_IDX = { L: 0, R: 1, l: 2, r: 3, B: 4 };
-const GD_GROUPS = { L: ["あ", "か", "さ", "た", "な"], R: ["は", "ま", "や", "ら", "わ"], l: ["が", "ざ", "だ", "ば", "ぱ"], r: ["小", "記", "小2", "記3", "言葉"], B: ["語0", "語1", "語2", "語3", "語4"] };
+const GD_GROUPS = { L: ["あ", "か", "さ", "た", "な"], R: ["は", "ま", "や", "ら", "わ"], l: ["が", "ざ", "だ", "ば", "ぱ"], r: ["小", "記", "記2", "消す", "言葉"], B: ["語0", "語1", "語2", "語3", "語4"] };
 const GD_ROWS = { "あ": "あいうえお", "か": "かきくけこ", "さ": "さしすせそ", "た": "たちつてと", "な": "なにぬねの", "は": "はひふへほ", "ま": "まみむめも", "や": ["や", null, "ゆ", null, "よ"], "ら": "らりるれろ", "わ": ["わ", null, null, null, "を"],
-  "が": "がぎぐげご", "ざ": "ざじずぜぞ", "だ": "だぢづでど", "ば": "ばびぶべぼ", "ぱ": "ぱぴぷぺぽ", "小": ["ゃ", "っ", "ゅ", "ぇ", "ょ"], "記": ["ん", "ー", "、", "！", "。"], "小2": "ぁぃぅぇぉ", "記3": ["゛", "？", "　", "「", "」"] };
-const GD_ROWNAME = { "小": "小さい字", "記": "記号", "小2": "小さい母音", "記3": "記号2", "言葉": "言葉の入口" };
-const GD_LONG = 450;   // ミリ秒:長押しの境目(越えたら「コッコッ」と震える)
+  "が": "がぎぐげご", "ざ": "ざじずぜぞ", "だ": "だぢづでど", "ば": "ばびぶべぼ", "ぱ": "ぱぴぷぺぽ", "小": ["ゃ", "っ", "ゅ", "゛", "ょ"], "記": ["ん", "ー", "、", "！", "。"], "記2": ["\n", "区切り", "「", "」", "？"] };
+const GD_ROWNAME = { "小": "小さい字・゛゜小", "記": "記号", "記2": "記号2", "消す": "1字消す", "言葉": "言葉の入口" };
 let GD_WORDS = load("mh_gdwords", ["ている", "という", "こと", "して", "した"]);
 const gdChars = row => { const cs = GD_ROWS[row]; return cs ? (Array.isArray(cs) ? cs : cs.split("")) : null; };
 function gdCodeOf(ch){ for (const g of GD_ORDER) for (let i = 0; i < 5; i++) { const cs = gdChars(GD_GROUPS[g][i]); if (!cs) continue; const v = cs.indexOf(ch); if (v >= 0) return g + GD_ORDER[i] + GD_ORDER[v]; }
@@ -279,20 +278,23 @@ const TK = (() => {
     draft += ch; saveAll(); say(shown(ch)); log("<b>" + tkJ(seq0) + "</b> → 「" + shown(ch) + "」" + (fixed ? "(際どい1回を読み直した)" : "")); showWrite(); }
   let seq0 = "", fixed = false;
 
-  function gdCmd(k){ buzz(25);
-    if (k === "L") { if (seq) { seq = ""; log("左の長押し → 打ちかけを取り消した"); } else if (!practice) { const r = backspace(); r ? log("左の長押し → " + r) : (buzz([10, 40, 10]), log("消すものがない", true)); } }
-    else if (k === "R") { seq = ""; if (!practice) { draft += "\n"; saveAll(); say("改行"); log("右の長押し → 改行"); } }
-    else if (k === "B") { seq = ""; if (practice) stopPractice(); else if (cut()) log("両の長押し → 区切った"); }
-    showWrite(); show(); }
-  function gdPush(sym){ seq += sym; const g = seq[0], row = seq.length >= 2 ? GD_GROUPS[g][GD_IDX[seq[1]]] : null, bad = why => { buzz([10, 40, 10]); log("<b>" + tkJ(seq) + "</b> → " + why, true); seq = ""; show(); };
+  let gdT = null, units = [];
+  function gdWait(){ clearTimeout(gdT); const w = OPT.gcancel || 0; if (!seq || !w) return;
+    gdT = setTimeout(() => { if (!seq || F.L || F.R) return; seq = ""; buzz([10, 40, 10]); log("手を止めたので、打ちかけを取り消した"); show(); }, w); }
+  function gdPush(sym){ clearTimeout(gdT); seq += sym; const g = seq[0], row = seq.length >= 2 ? GD_GROUPS[g][GD_IDX[seq[1]]] : null, bad = why => { buzz([10, 40, 10]); log("<b>" + tkJ(seq) + "</b> → " + why, true); seq = ""; show(); };
     if (seq.length === 2) {
-      if (g === "B") { const w = GD_WORDS[GD_IDX[seq[1]]]; if (!w) return bad("その言葉はまだない"); seq0 = seq; fixed = false; seq = ""; commit(w); show(); return; }
-      show(); return; }
+      if (row === "消す") { seq0 = seq; seq = ""; buzz(25); if (practice) { show(); return; }
+        const u = units.pop();
+        if (u && u.length > 1 && draft.endsWith(u)) { draft = draft.slice(0, -u.length); saveAll(); say("消した"); log("<b>" + tkJ(seq0) + "</b> → 言葉「" + u + "」を消した"); }
+        else { const r = backspace(); r ? log("<b>" + tkJ(seq0) + "</b> → " + r) : log("消すものがない", true); }
+        showWrite(); show(); return; }
+      if (g === "B") { const w = GD_WORDS[GD_IDX[seq[1]]]; if (!w) return bad("その言葉はまだない"); seq0 = seq; fixed = false; seq = ""; commit(w); units.push(w); if (units.length > 50) units.shift(); show(); return; }
+      show(); gdWait(); return; }
     if (seq.length === 3) {
-      if (row === "言葉") { const w = GD_WORDS[5 + GD_IDX[seq[2]]]; if (!w) return bad("その言葉はまだない"); seq0 = seq; fixed = false; seq = ""; commit(w); show(); return; }
+      if (row === "言葉") { const w = GD_WORDS[5 + GD_IDX[seq[2]]]; if (!w) return bad("その言葉はまだない"); seq0 = seq; fixed = false; seq = ""; commit(w); units.push(w); if (units.length > 50) units.shift(); show(); return; }
       const cs = gdChars(row), ch = cs ? cs[GD_IDX[seq[2]]] : null;
-      if (!ch) return bad("その字はない"); seq0 = seq; fixed = false; seq = ""; commit(ch); show(); return; }
-    show(); }
+      if (!ch) return bad("その字はない"); seq0 = seq; fixed = false; seq = ""; commit(ch); if (ch === "区切り") units = []; else if (ch !== "゛") { units.push(ch); if (units.length > 50) units.shift(); } show(); return; }
+    show(); gdWait(); }
   function push(sym, alt){ if (OPT.fmt === "gyodan") return gdPush(sym); seq += sym; alts.push(alt || null); const dec = tkDec(), keys = Object.keys(dec), pre = q => keys.some(k => k.startsWith(q));
     if (dec[seq] != null) { seq0 = seq; fixed = false; const ch = dec[seq]; seq = ""; alts = []; commit(ch); show(); return; }
     if (seq === TK_TABLE["言葉"] && !TK_WORDS.length) { buzz([10, 40, 10]); log("言葉がまだない(形の画面で足す)", true); seq = ""; alts = []; show(); return; }
@@ -310,17 +312,11 @@ const TK = (() => {
     const now = performance.now(), o = F[s === "L" ? "R" : "L"];
     const f = { id: e.pointerId, x: e.clientX, t0: now, enc: !!o, mod: false, chord: false };
     if (o && !o.mod && !o.enc && !o.chord && now - o.t0 < CHORD) { f.chord = o.chord = true; }
-    F[s] = f; keepAwake();
-    if (OPT.fmt === "gyodan") f.ltimer = setTimeout(() => { if (F[s] !== f || f.mod) return; const p = F[s === "L" ? "R" : "L"];
-      if (f.chord && p && p.chord) { if (!p.long) { f.long = p.long = true; buzz([12, 50, 12]); } return; }
-      if (!f.chord && !(p && p.t0 < f.t0)) { f.long = true; buzz([12, 50, 12]); } }, OPT.glong || GD_LONG); }
+    F[s] = f; keepAwake(); }
   function up(e, cancel){ const s = F.L && F.L.id === e.pointerId ? "L" : F.R && F.R.id === e.pointerId ? "R" : null; if (!s) return;
     const f = F[s], os = s === "L" ? "R" : "L", o = F[os]; F[s] = null; lastRel[s] = { t0: f.t0, tUp: performance.now() }; if (cancel) return;
     // 2本いっしょに触れた:2本とも続けて離れたら「いっしょのトン」、片方が残ったら、残った指は置いた指(もう片方は ' 付きのトン)
-    clearTimeout(f.ltimer);
-    if (f.chord && f.pairUp) { clearTimeout(f.pairUp.timer); if (OPT.fmt === "gyodan") { if (f.long) gdCmd("B"); else push("B"); } else chordCmd(); return; }
-    if (OPT.fmt === "gyodan" && f.chord && f.long && o && o.chord) { o.pairUp = { timer: setTimeout(() => { o.pairUp = null; }, 400) }; return; }
-    if (OPT.fmt === "gyodan" && f.long && !f.chord && !f.mod) { gdCmd(s); return; }
+    if (f.chord && f.pairUp) { clearTimeout(f.pairUp.timer); if (OPT.fmt === "gyodan") push("B"); else chordCmd(); return; }
     if (f.chord && o && o.chord) { o.pairUp = { timer: setTimeout(() => { o.pairUp = null; o.chord = false; f.chord = false; single(s, f, os, F[os] === o ? o : null); }, 90) }; return; }
     single(s, f, os, o); }
   function single(s, f, os, o){ if (f.mod) return;   // 置いていた指:何も打たない
@@ -366,8 +362,10 @@ function gdRulesHtml(){ const chip = c => '<span class="tkcode">' + c.split("").
     "<li><b>どの字も3回</b>:1回目=5行のまとまり、2回目=その中の何番目の行、3回目=段</li>" +
     "<li><b>段</b>:あ=左・い=右・う=左'・え=右'・お=両</li>" +
     "<li>例:「き」は、か行(左右)+い段(右)で <b>左右右</b>。「の」は、な行(左両)+お段(両)で <b>左両両</b></li>" +
-    "<li><b>両のまとまり</b>は、よく出る言葉(2回で打てる)。<b>右'両</b>+1回=もう5つの言葉</li>" +
-    "<li><b>長押し</b>(押し続けて「コッコッ」と震えたら離す。震えるまでの長さは、上の設定の「長押しの境目」で変えられる):<b>左=1字消す</b>(打ちかけの途中なら、打ちかけを取り消す)・<b>右=改行</b>・<b>両=区切り</b>(次のメモへ)</li>" +
+    "<li><b>両のまとまり</b>は、よく出る言葉(2回で打てる)。<b>右'右'</b>=1字消す(2回)。<b>右'両</b>+1回=もう5つの言葉</li>" +
+    "<li>改行・区切り・「 」・？は<b>記号2の行</b>(右'左'+段)。゛゜小は小さい字の行のえ段(右'左右')で、直前の字を 濁る→半濁る→小さく→元 に変える(あ→ぁ もこれで作る)</li>" +
+    "<li><b>途中で間違いに気づいたら、残りを何でもいいから叩いて3回で終わらせ、右'右'</b>。どの字も3回で必ず終わるので、これで元に戻る。<b>右'右'は「直前に入れたもの」を消す</b>(字なら1字、言葉なら言葉ごと)</li>" +
+    "<li>手を止めたら打ちかけを消す、もできる(上の設定。はじめは「しない」)</li>" +
     "<li><b>字が決まると「コッ」と震える</b>。3回ごとに決まるので、リズムで区切りが分かる</li>" +
     "<li>手のひらのような大きな触れ方、画面の縁からの触れ方、3本目の指は数えない</li></ol>" +
     "<h2>行の表(1回目×2回目)</h2><div style=\"overflow-x:auto\"><table class=\"gdt\"><tr><th></th>" + GD_ORDER.map(x => "<th>2回目 " + chip(x) + "</th>").join("") + "</tr>" +
@@ -469,8 +467,9 @@ $("regimp").onclick = () => { const s = prompt("書き出した登録を貼っ�
 $("o-bspeak").checked = OPT.bspeak === true; $("o-bspeak").onchange = () => { OPT.bspeak = $("o-bspeak").checked; saveAll(); };
 $("o-btext").checked = OPT.btext === true; $("o-btext").onchange = () => { OPT.btext = $("o-btext").checked; saveAll(); document.body.classList.toggle("btext", OPT.btext); };
 [["o-speak", "speak"], ["o-vib", "vib"], ["o-trace", "trace"], ["o-log", "log"]].forEach(([id, k]) => { $(id).checked = opt(k); $(id).onchange = () => { OPT[k] = $(id).checked; saveAll(); if (k === "log") $("log").innerHTML = ""; }; });
-$("o-long").value = OPT.glong || 450; $("o-longv").textContent = ((OPT.glong || 450) / 1000).toFixed(2) + "秒";
-$("o-long").oninput = () => { OPT.glong = +$("o-long").value; $("o-longv").textContent = (OPT.glong / 1000).toFixed(2) + "秒"; saveAll(); };
+const gcTxt = v => v ? (v / 1000).toFixed(1) + "秒" : "しない";
+$("o-gcancel").value = OPT.gcancel || 0; $("o-gcancelv").textContent = gcTxt(+$("o-gcancel").value);
+$("o-gcancel").oninput = () => { OPT.gcancel = +$("o-gcancel").value; $("o-gcancelv").textContent = gcTxt(OPT.gcancel); saveAll(); };
 $("o-gap").value = OPT.gap || 4; $("o-gap").oninput = () => { OPT.gap = +$("o-gap").value; saveAll(); layout(); };
 $("o-rate").value = OPT.rate || 14; $("o-rate").onchange = () => { OPT.rate = +$("o-rate").value; saveAll(); say("このくらいの速さ"); };
 /* 画面の切り替え */
